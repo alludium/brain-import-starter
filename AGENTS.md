@@ -28,7 +28,8 @@ Ignore rules do not protect arbitrary new filenames: inspect the staged diff bef
 ## Import deliberately
 
 Planning is safe to run within the selected scope; live Notion planning reads the Notion API.
-No plan or inspect command may call Brain. `apply` writes to Brain and requires the exact digest
+No plan or inspect command may call Brain. `preview` and the local UI dry run may call Brain
+for no-write matching after verifying its advertised dry_run capability. `apply` writes to Brain and requires the exact digest
 of the reviewed plan. Get authorization for the concrete selection and audience before the first
 real import, unless the user has already clearly authorized them. Never auto-apply during setup,
 tests or CI. Verify account IDs with `identity` and keep them bound to the plan.
@@ -63,3 +64,11 @@ permissions from note contents. The backend owns matching and the Sources review
 name-only and conflicting candidates pending; do not manufacture AI percentage confidence or
 teach aliases from a single decision. Always preserve existing audiences, and stop on schema or
 scope mismatch. Property-only revisions currently need an explicit future design, not fake edits.
+
+## Local wizard
+
+The Obsidian UI lives in ui/ (Vite/React); local_ui.py serves it on loopback with a session key.
+Run `npm ci --prefix ui`, `npm run build --prefix ui` and `npm test --prefix ui`. Keep the backend
+matcher authoritative. A dry run must never fall back to capture on an older server. Never bypass
+Host/Origin/session-key checks or allow a browser to provide arbitrary tool names, target accounts,
+shell commands or saved-plan paths. CI builds the UI into the wheel. See docs/local-ui.md.

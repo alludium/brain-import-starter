@@ -60,7 +60,23 @@ def records(config: dict, base: Path):
                         "A selected note has no configured stable identity property."
                     )
                 identity = "id:" + identity
-            matching = evidence(properties, body, config)
+            rules = config.get("folder_rules", [])
+            selected = [r for r in rules if relative.startswith(r["folder"].rstrip("/") + "/")]
+            rule = max(selected, key=lambda r: len(r["folder"]), default={})
+            mapped = {**config, "fields": {**config.get("fields", {}), **rule.get("fields", {})}}
+            matching = evidence(properties, body, mapped)
+            profile = rule.get("profile", "notes")
+            if profile not in {"notes", "organization", "person"}:
+                raise ImportProblem("Folder profile must be notes, organization or person.")
+            if profile != "notes" and not any(s["type"] == profile for s in matching["subjects"]):
+                matching["subjects"].append(
+                    {
+                        "type": profile,
+                        "name": matching["heading"] or path.stem[:300],
+                        "location": "folder." + rule["folder"],
+                        "role": "subject",
+                    }
+                )
             matching["heading"] = matching["heading"] or path.stem[:500]
             yield Record(
                 "obsidian",

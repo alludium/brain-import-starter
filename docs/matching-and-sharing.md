@@ -15,6 +15,13 @@ Decisions are audited and bound to the source revision and review version. An ed
 review; replaying unchanged input cannot override a rejection. Reviewing never shares a source.
 The backend makes no AI calls for these matches and does not invent percentage confidence.
 
+## Preview before importing
+
+The [local Obsidian wizard](local-ui.md), or `brain-import preview PLAN`, asks the same backend
+matcher for candidates without storing sources or decisions. It shows new/revision/unchanged,
+automatic/pending/unmatched evidence, and retains prior human decisions on unchanged notes.
+This contacts Brain; offline `plan`/`inspect` do not. Preview is a point-in-time result, not a lock.
+
 ## Choose an audience in the configuration
 
 At the top of the TOML file, before `[target]` or `[source]`, choose one:

@@ -3,6 +3,7 @@
 import json
 import os
 import subprocess
+from urllib.parse import urlsplit
 
 from brain_import.model import ImportProblem
 
@@ -72,6 +73,53 @@ class Brain:
                 "Unexpected Brain CLI response; check the CLI/server versions."
             ) from exc
 
+    def login(self):
+        try:
+            result = subprocess.run(
+                ["brain", "--server", self.target["server"], "login"],
+                capture_output=True,
+                timeout=300,
+                check=False,
+            )
+            if result.returncode:
+                raise ImportProblem(
+                    "Sign-in did not finish. Run brain login in your terminal for guidance."
+                )
+        except (OSError, subprocess.TimeoutExpired):
+            raise ImportProblem(
+                "Cannot finish sign-in. Check the Brain CLI and try again."
+            ) from None
+
+    def require_preview(self):
+        # Discover before ever sending capture: older servers must not silently ignore dry_run.
+        try:
+            result = subprocess.run(
+                ["brain", "--server", self.target["server"], "tools"],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=180,
+                check=False,
+            )
+            tools = json.loads(result.stdout).get("tools", []) if result.returncode == 0 else []
+            capture = next(t for t in tools if t.get("name") == "capture")
+            fields = capture["inputSchema"]["properties"]
+            if fields.get("dry_run", {}).get("type") != "boolean" or "matching" not in fields:
+                raise ValueError
+        except (
+            OSError,
+            subprocess.TimeoutExpired,
+            ValueError,
+            KeyError,
+            TypeError,
+            AttributeError,
+            StopIteration,
+        ):
+            raise ImportProblem(
+                "This Brain connection does not advertise safe import previews. "
+                "Update the matching-preview backend before continuing. Nothing was imported."
+            ) from None
+
     def identity(self) -> dict:
         self.workspace_context = None
         result = self.call("configure", {"account": {}})
@@ -80,6 +128,12 @@ class Brain:
             raise ImportProblem("Brain did not return an account identity.")
         context = result.get("workspace_context") or account.get("workspace_context")
         if not isinstance(context, str) or not context.strip():
+            # Local dev tokens are bound to one firm and do not issue OAuth workspace contexts.
+            local = urlsplit(self.target["server"]).hostname in {"localhost", "127.0.0.1", "::1"}
+            if local and os.environ.get("BRAIN_ACCESS_TOKEN"):
+                return {
+                    key: account.get(key) for key in ("firm_id", "firm_name", "user_id", "name")
+                }
             raise ImportProblem("Brain did not return a workspace context; update the server.")
         self.workspace_context = context
         return {key: account.get(key) for key in ("firm_id", "firm_name", "user_id", "name")}

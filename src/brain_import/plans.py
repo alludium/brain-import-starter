@@ -44,7 +44,10 @@ def validate_audience(item):
 def server_url(value: str):
     url = urlsplit(value)
     if (
-        url.scheme != "https"
+        (
+            url.scheme != "https"
+            and not (url.scheme == "http" and url.hostname in {"localhost", "127.0.0.1", "::1"})
+        )
         or not url.hostname
         or url.username
         or url.password
@@ -52,7 +55,8 @@ def server_url(value: str):
         or url.fragment
     ):
         raise ImportProblem(
-            "Brain server must be an HTTPS URL without credentials, query or fragment."
+            "Brain server must use HTTPS (HTTP only on loopback), "
+            "without credentials, query or fragment."
         )
     return value
 
@@ -60,6 +64,10 @@ def server_url(value: str):
 def load_config(path: Path):
     with path.open("rb") as stream:
         config = tomllib.load(stream)
+    return validate_config(config)
+
+
+def validate_config(config):
     server_url(config["target"]["server"])
     for key in ("firm_id", "user_id"):
         if not isinstance(config["target"].get(key), str) or not config["target"][key].strip():
@@ -126,10 +134,14 @@ def validate(plan: dict):
 
 
 def build(config_path: Path):
-    config = load_config(config_path)
+    return build_config(load_config(config_path), config_path.resolve().parent)
+
+
+def build_config(config, base):
+    validate_config(config)
     source = config["source"]
     items, total = [], 0
-    for record in ADAPTERS[source["type"]](source, config_path.resolve().parent):
+    for record in ADAPTERS[source["type"]](source, base):
         item = record.payload(config.get("scope", "private"))
         item["preserve_audience"] = True
         for key in ("group", "people"):

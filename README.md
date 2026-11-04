@@ -12,6 +12,13 @@ Brain's normal processing, permissions and usage charges still apply.
 This is deliberately a few ordinary Python modules. No connector framework, background service,
 or separate Brain authentication to maintain.
 
+## Import Obsidian through a local UI
+
+Build once with `npm ci --prefix ui && npm run build --prefix ui`, then run
+`uv run brain-import ui`. Choose your vault and folders, map properties, set sharing and run a
+no-write matching preview before confirming the import. See the [wizard guide](docs/local-ui.md).
+The backend must advertise `capture.dry_run`; older servers are blocked before sending notes.
+
 ## Try it in two minutes
 
 Requires [uv](https://docs.astral.sh/uv/getting-started/installation/) and Python 3.12+.
@@ -27,7 +34,7 @@ uv run brain-import inspect .local/obsidian.plan.json
 ```
 
 The output lists selected records, their scope and hashes. The `.local/` plans contain the original
-text, so treat them as private source copies. Planning reads sources but makes **no Brain calls**.
+text, so treat them as private source copies. Planning reads sources but makes **no Brain calls**. The separate `preview` command and UI dry run contact Brain without importing.
 The Notion example reads synthetic API responses; the live adapter uses the same conversion.
 Outputs are never overwritten: choose a new filename for a new plan or run.
 
