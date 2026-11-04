@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+dist/
+*.egg-info/
+.env
+.env.*
+!.env.example
+.local/
+config.local.toml
+*.plan.json
+*.receipts.jsonl
+.DS_Store

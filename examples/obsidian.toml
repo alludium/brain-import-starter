@@ -1,0 +1,13 @@
+scope = "private"
+max_records = 10
+[target]
+server = "https://app.brain.alludium.ai/mcp"
+firm_id = "synthetic-firm-do-not-apply"
+user_id = "synthetic-user-do-not-apply"
+[source]
+type = "obsidian"
+namespace = "example-research"
+vault = "obsidian-vault"
+vault_name = "Example research"
+include = ["*.md"]
+exclude = ["Templates/*"]

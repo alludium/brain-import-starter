@@ -1,0 +1,24 @@
+# Copy to config.local.toml. Relative paths are relative to THIS file.
+scope = "private"
+max_records = 50
+
+[target]
+server = "https://app.brain.alludium.ai/mcp"
+firm_id = "REPLACE_FROM_IDENTITY"
+user_id = "REPLACE_FROM_IDENTITY"
+
+[source]
+type = "obsidian"
+namespace = "my-research-vault" # Stable and unique within the firm's source system.
+vault = "/absolute/path/to/your/vault"
+vault_name = "Research" # Name Obsidian uses for its open links.
+include = ["Research/*.md"] # fnmatch: * also matches directory separators.
+exclude = ["Research/Private/*", "Templates/*", "Archive/*"]
+max_text_bytes = 500000
+
+# For Notion, replace the [source] values above with:
+# type = "notion"
+# namespace = "my-notion-workspace"
+# page_ids = ["00000000-0000-4000-8000-000000000001"]
+# token_env = "NOTION_TOKEN"
+# max_text_bytes = 500000

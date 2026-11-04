@@ -1,0 +1,11 @@
+scope = "private"
+max_records = 10
+[target]
+server = "https://app.brain.alludium.ai/mcp"
+firm_id = "synthetic-firm-do-not-apply"
+user_id = "synthetic-user-do-not-apply"
+[source]
+type = "notion"
+namespace = "example-notion"
+page_ids = ["10000000-0000-4000-8000-000000000001"]
+fixture = "notion-pages.json" # Remove for real API reads; set NOTION_TOKEN locally.
