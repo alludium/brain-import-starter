@@ -1,5 +1,7 @@
 # Copy to config.local.toml. Relative paths are relative to THIS file.
-scope = "private"
+scope = "private" # or firm, people, group; never internet-public
+# people = ["alice@example.test"] # only with scope = "people"
+# group = "Research team" # only with scope = "group"
 max_records = 50
 
 [target]
@@ -15,6 +17,7 @@ vault_name = "Research" # Name Obsidian uses for its open links.
 include = ["Research/*.md"] # fnmatch: * also matches directory separators.
 exclude = ["Research/Private/*", "Templates/*", "Archive/*"]
 max_text_bytes = 500000
+# identity_property = "brain_id" # optional stable YAML ID, required in every selected note
 
 # For Notion, replace the [source] values above with:
 # type = "notion"
@@ -22,3 +25,8 @@ max_text_bytes = 500000
 # page_ids = ["00000000-0000-4000-8000-000000000001"]
 # token_env = "NOTION_TOKEN"
 # max_text_bytes = 500000
+
+# Optional, after [source]:
+# [source.fields]
+# company = "Company"
+# website = "URL"

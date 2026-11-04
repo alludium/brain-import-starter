@@ -93,13 +93,14 @@ same source, change accounts mid-run, or replay old plans after newer versions h
 
 | Source | Included | Deliberate boundary |
 | --- | --- | --- |
-| Obsidian | Selected UTF-8 Markdown, original frontmatter and wikilinks, vault-relative IDs, open-in-Obsidian links | No attachment bytes, Canvas, plugin data, graph reconstruction or inferred entities |
+| Obsidian | Selected UTF-8 Markdown, original frontmatter and wikilinks, vault-relative IDs, open-in-Obsidian links | Typed property evidence and heading review; no attachment bytes, Canvas or graph reconstruction |
 | Notion | Explicit page IDs, original API Markdown, title, stable IDs and Notion URLs | No workspace crawl, database property export, child-page traversal, comments, attachment download or meeting transcripts |
 
-Imports default to **private**. `scope = "firm"` is explicit, and source permissions are not
+Imports default to **private**; firm, selected people and existing groups are explicit choices.
+See [matching and sharing](docs/matching-and-sharing.md). Source permissions are not
 mirrored. Existing versions retain their earlier audience: changing config is not a sharing
 operation. A returned scope mismatch stops the run for review. Deleted source files stay in
-Brain; renaming an Obsidian file changes its identity. See [source behavior](docs/architecture.md).
+Brain; renaming an Obsidian file changes its identity unless configured with a stable property. See [source behavior](docs/architecture.md).
 
 ## Extend it
 
@@ -129,3 +130,7 @@ the wheel. No credentials or real source data are used in CI. Live Notion reads 
 Brain imports need your own scoped acceptance run; automated tests are not evidence of those.
 
 [MIT licensed](LICENSE). Start small, then make it fit how your firm works.
+
+Structured imports require the matching-review backend release. Check the tool fields described
+in [matching and sharing](docs/matching-and-sharing.md) before live apply. Offline examples do not
+require a Brain connection.

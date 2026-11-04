@@ -9,3 +9,7 @@ type = "notion"
 namespace = "example-notion"
 page_ids = ["10000000-0000-4000-8000-000000000001"]
 fixture = "notion-pages.json" # Remove for real API reads; set NOTION_TOKEN locally.
+
+[source.fields]
+company = "Company"
+website = "Website"

@@ -6,6 +6,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from brain_import.model import ImportProblem, Record
+from brain_import.properties import evidence, frontmatter, label
 
 
 def records(config: dict, base: Path):
@@ -50,4 +51,22 @@ def records(config: dict, base: Path):
                 + "&file="
                 + quote(relative, safe="")
             )
-            yield Record("obsidian", namespace + ":" + relative, path.stem, text, url)
+            properties, body = frontmatter(text)
+            identity = relative
+            if key := config.get("identity_property"):
+                identity = label(properties.get(key, ""))
+                if not identity:
+                    raise ImportProblem(
+                        "A selected note has no configured stable identity property."
+                    )
+                identity = "id:" + identity
+            matching = evidence(properties, body, config)
+            matching["heading"] = matching["heading"] or path.stem[:500]
+            yield Record(
+                "obsidian",
+                namespace + ":" + identity,
+                path.stem,
+                text,
+                url,
+                matching=matching,
+            )

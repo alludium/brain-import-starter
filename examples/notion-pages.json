@@ -12,6 +12,18 @@
               "plain_text": "Northwind research"
             }
           ]
+        },
+        "Company": {
+          "type": "rich_text",
+          "rich_text": [
+            {
+              "plain_text": "Northwind Robotics"
+            }
+          ]
+        },
+        "Website": {
+          "type": "url",
+          "url": "https://northwind-robotics.example"
         }
       }
     },

@@ -14,6 +14,31 @@ from brain_import.model import ImportProblem
 MAX_PLAN_BYTES = 32 * 1024 * 1024
 ADAPTERS = {"obsidian": obsidian.records, "notion": notion.records}
 PAYLOAD_KEYS = {"system", "external_id", "title", "text", "url", "kind", "scope"}
+OPTIONAL_KEYS = {"matching", "people", "group", "preserve_audience"}
+
+
+def validate_audience(item):
+    scope = item.get("scope", "private")
+    if scope not in {"private", "firm", "people", "group"}:
+        raise ImportProblem("Scope must be private, people, group or firm.")
+    if scope == "group":
+        if (
+            not isinstance(item.get("group"), str)
+            or not item["group"].strip()
+            or item.get("people")
+        ):
+            raise ImportProblem("Group scope needs one group name and no people list.")
+    elif scope == "people":
+        people = item.get("people")
+        if (
+            not isinstance(people, list)
+            or not 1 <= len(people) <= 50
+            or any(not isinstance(p, str) or not p.strip() for p in people)
+            or item.get("group")
+        ):
+            raise ImportProblem("People scope needs 1–50 member names/emails and no group.")
+    elif item.get("people") or item.get("group"):
+        raise ImportProblem("Recipients require people or group scope.")
 
 
 def server_url(value: str):
@@ -46,8 +71,7 @@ def load_config(path: Path):
         )
     if source["type"] not in ADAPTERS:
         raise ImportProblem("Unknown source type; add its reader to ADAPTERS.")
-    if config.get("scope", "private") not in {"private", "firm"}:
-        raise ImportProblem("Scope must be private or firm.")
+    validate_audience(config)
     if not 1 <= config.get("max_records", 500) <= 5000:
         raise ImportProblem("max_records must be between 1 and 5000.")
     if not 1 <= source.get("max_text_bytes", 500_000) <= 2_000_000:
@@ -76,14 +100,19 @@ def validate(plan: dict):
         raise ImportProblem("Selection is empty; check filters and source access.")
     seen = set()
     for item in plan["records"]:
-        if set(item) != PAYLOAD_KEYS:
+        if not PAYLOAD_KEYS <= set(item) or set(item) - PAYLOAD_KEYS - OPTIONAL_KEYS:
             raise ImportProblem("Unexpected capture fields in plan; regenerate it.")
         if not all(
             isinstance(item[k], str) and item[k].strip()
             for k in ("system", "external_id", "title", "text")
         ):
             raise ImportProblem("Every record needs text, title and stable source IDs.")
-        if item["scope"] not in {"private", "firm"} or item["kind"] not in {
+        validate_audience(item)
+        if item.get("preserve_audience") is not True:
+            raise ImportProblem("Imports must preserve existing audiences.")
+        if "matching" in item and not isinstance(item["matching"], dict):
+            raise ImportProblem("Matching evidence must be an object.")
+        if item["kind"] not in {
             "document",
             "external_record",
         }:
@@ -102,6 +131,10 @@ def build(config_path: Path):
     items, total = [], 0
     for record in ADAPTERS[source["type"]](source, config_path.resolve().parent):
         item = record.payload(config.get("scope", "private"))
+        item["preserve_audience"] = True
+        for key in ("group", "people"):
+            if key in config:
+                item[key] = config[key]
         size = len(record.text.encode("utf-8"))
         total += len(encode(item))
         if size > source.get("max_text_bytes", 500_000):

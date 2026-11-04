@@ -54,3 +54,12 @@ and `uv build`. Test selection, source identity across edits, repeat imports, pa
 privacy of errors and the real subprocess boundary with a fake CLI. No live writes in tests.
 Use synthetic fixtures only. Keep README commands and both offline examples runnable.
 Report local test evidence separately from live provider and authenticated Brain acceptance.
+
+## Structured matching and review
+
+Read docs/matching-and-sharing.md before extending identity extraction. Source properties map to
+bounded typed evidence; never pass arbitrary YAML through as capture arguments. Never derive
+permissions from note contents. The backend owns matching and the Sources review queue. Keep
+name-only and conflicting candidates pending; do not manufacture AI percentage confidence or
+teach aliases from a single decision. Always preserve existing audiences, and stop on schema or
+scope mismatch. Property-only revisions currently need an explicit future design, not fake edits.

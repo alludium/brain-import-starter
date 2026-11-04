@@ -15,6 +15,10 @@ class Record:
     text: str
     url: str | None = None
     kind: str = "document"
+    matching: dict | None = None
 
     def payload(self, scope: str) -> dict:
-        return {**asdict(self), "scope": scope}
+        data = asdict(self)
+        if data["matching"] is None:
+            del data["matching"]
+        return {**data, "scope": scope}

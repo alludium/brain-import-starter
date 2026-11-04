@@ -1,6 +1,9 @@
 ---
 tags: [robotics, research]
 status: researching
+brain_id: northwind-robotics
+company: Northwind Robotics
+website: https://northwind-robotics.example
 ---
 # Northwind Robotics
 

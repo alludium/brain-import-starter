@@ -37,3 +37,25 @@ which differ from this starter's versioned text capture. Neither path deletes mi
 
 See [Obsidian's vault documentation](https://docs.obsidian.md/Plugins/Vault) and
 [attachment behavior](https://obsidian.md/help/attachments).
+
+## Structured identity properties
+
+The original YAML remains in the note. These default properties also become bounded matching
+hints: `company`, `website`, `person`, `email`, `company_website`, `companies`, `attendees`.
+A person note's `company_website` identifies their affiliation, never the person's identity.
+Lists and quoted wikilinks such as `company: "[[Companies/Acme AI]]"` are supported. Arbitrary
+inline `Field:: value` text stays prose; it is not parsed as a property. Headings nominate
+candidates only. If there is no H1, the filename is the heading hint.
+
+For custom field names add a table after the source settings:
+
+```toml
+[source.fields]
+company = "Company"
+website = "URL"
+person = "Contact"
+```
+
+This maps exact property names; unmapped properties remain in the original only. Invalid YAML,
+duplicate keys, anchors, non-text identity values and oversized fields stop planning. See
+[matching and sharing](matching-and-sharing.md) for review, audiences and stable identity options.
