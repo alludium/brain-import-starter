@@ -20,6 +20,12 @@ The backend makes no AI calls for these matches and does not invent percentage c
 The [local Obsidian wizard](local-ui.md), or `brain-import preview PLAN`, asks the same backend
 matcher for candidates without storing sources or decisions. It shows new/revision/unchanged,
 automatic/pending/unmatched evidence, and retains prior human decisions on unchanged notes.
+Unresolved subjects can be confirmed, left unlinked or deferred in the wizard before import.
+Search another existing identity of the same type if the suggested candidates are wrong. Search
+respects the selected audience. Your choices are saved in `import_review` in the exact plan, with
+a backend snapshot digest; apply checks the snapshot, then stores the source and decisions in
+one transaction. Stale choices fail rather than overriding a concurrent reviewer. They do not
+teach aliases or affect future revisions. Untouched/deferred subjects stay in Sources review.
 This contacts Brain; offline `plan`/`inspect` do not. Preview is a point-in-time result, not a lock.
 
 ## Choose an audience in the configuration

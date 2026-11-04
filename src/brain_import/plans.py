@@ -14,7 +14,7 @@ from brain_import.model import ImportProblem
 MAX_PLAN_BYTES = 32 * 1024 * 1024
 ADAPTERS = {"obsidian": obsidian.records, "notion": notion.records}
 PAYLOAD_KEYS = {"system", "external_id", "title", "text", "url", "kind", "scope"}
-OPTIONAL_KEYS = {"matching", "people", "group", "preserve_audience"}
+OPTIONAL_KEYS = {"matching", "people", "group", "preserve_audience", "import_review"}
 
 
 def validate_audience(item):
@@ -120,6 +120,28 @@ def validate(plan: dict):
             raise ImportProblem("Imports must preserve existing audiences.")
         if "matching" in item and not isinstance(item["matching"], dict):
             raise ImportProblem("Matching evidence must be an object.")
+        if "import_review" in item:
+            review = item["import_review"]
+            if (
+                not isinstance(review, dict)
+                or set(review) != {"snapshot", "choices"}
+                or not re.fullmatch(r"[a-f0-9]{64}", str(review.get("snapshot", "")))
+                or not isinstance(review["choices"], list)
+                or len(review["choices"]) > 30
+            ):
+                raise ImportProblem("Invalid reviewed choices; run a new dry run.")
+            seen_choices = set()
+            for choice in review["choices"]:
+                if (
+                    not isinstance(choice, dict)
+                    or set(choice) - {"fingerprint", "action", "entity_id"}
+                    or not re.fullmatch(r"[a-f0-9]{64}", str(choice.get("fingerprint", "")))
+                    or choice["fingerprint"] in seen_choices
+                    or choice.get("action") not in {"approve", "reject", "defer"}
+                    or (choice["action"] == "approve") != bool(choice.get("entity_id"))
+                ):
+                    raise ImportProblem("Invalid reviewed choice; run a new dry run.")
+                seen_choices.add(choice["fingerprint"])
         if item["kind"] not in {
             "document",
             "external_record",

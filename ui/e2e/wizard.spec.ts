@@ -104,6 +104,60 @@ test("select, map, preview, filter, invalidate and import with explicit confirma
   await expect(
     page.getByRole("checkbox", { name: /I have reviewed/ }),
   ).toBeEnabled();
+  // Resolve a suggested candidate, undo it, then select a searched identity.
+  await page.getByRole("button", { name: "All notes", exact: true }).click();
+  const conflict = page
+    .locator(".note")
+    .filter({ has: page.locator("summary strong", { hasText: "Conflict" }) });
+  if (!(await conflict.getAttribute("open")))
+    await conflict.locator("summary").click();
+  await conflict
+    .getByRole("button", { name: "Choose Acme", exact: true })
+    .click();
+  await expect(
+    conflict.getByText("Confirmed by you", { exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "All notes", exact: true }).click();
+  await conflict.locator("summary").click();
+  await expect(
+    conflict.getByText("Confirmed by you", { exact: true }),
+  ).toBeVisible();
+  await conflict.getByRole("button", { name: "Change choice" }).click();
+  await conflict.getByLabel("Search another company").fill("Birch");
+  await conflict.getByRole("button", { name: "Search Brain" }).click();
+  await conflict
+    .getByRole("button", { name: "Choose Birch", exact: true })
+    .click();
+  await expect(conflict.locator(".choice-saved")).toContainText("Birch");
+  const unknown = page
+    .locator(".note")
+    .filter({ has: page.locator("summary strong", { hasText: "Unknown" }) });
+  await unknown.locator("summary").click();
+  await unknown
+    .getByRole("button", { name: "Leave unlinked", exact: true })
+    .click();
+  await expect(unknown.locator(".choice-saved")).toContainText(
+    "Leave unlinked",
+  );
+  await unknown.getByRole("button", { name: "Change choice" }).click();
+  await unknown
+    .getByRole("button", { name: "Review later", exact: true })
+    .click();
+  await expect(unknown.locator(".choice-saved")).toContainText(
+    "Review later in Sources",
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBeTruthy();
+  await page.screenshot({
+    path: "test-results/review-choices-mobile.png",
+    fullPage: true,
+  });
   await page.getByRole("checkbox", { name: /I have reviewed/ }).check();
   await page
     .getByRole("button", { name: "Import 3 notes", exact: true })

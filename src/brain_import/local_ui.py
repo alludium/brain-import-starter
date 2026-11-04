@@ -17,7 +17,7 @@ from urllib.parse import urlsplit
 from brain_import.brain import Brain
 from brain_import.main import apply
 from brain_import.model import ImportProblem
-from brain_import.plans import build_config, encode, private_file, save, summary
+from brain_import.plans import build_config, encode, private_file, save, summary, validate
 from brain_import.preview import preview_plan
 
 ASSETS = Path(__file__).parent / "web"
@@ -115,7 +115,13 @@ class Wizard:
                 raise ImportProblem(
                     "The reviewed state changed. Run a new preview before importing."
                 )
-            if self.state["phase"] in {"connecting", "signing_in", "previewing", "importing"}:
+            if self.state["phase"] in {
+                "connecting",
+                "signing_in",
+                "previewing",
+                "reviewing",
+                "importing",
+            }:
                 raise ImportProblem("An operation is already running. Wait for it to finish.")
             self.state.update(phase=phase, error=None, message=None, progress=0)
 
@@ -189,6 +195,75 @@ class Wizard:
 
         return self.start("previewing", run)
 
+    def review_item(self, data, *, search=False):
+        with self.lock:
+            if self.state["phase"] != "ready" or not self.plan or data.get("sha256") != self.sha:
+                raise ImportProblem("The preview changed. Refresh before choosing a match.")
+            index = data.get("record")
+            if type(index) is not int or not 0 <= index < len(self.plan["records"]):
+                raise ImportProblem("Choose a note from this preview.")
+            plan, previews = copy.deepcopy(self.plan), copy.deepcopy(self.preview)
+            item, preview = plan["records"][index], previews[index]
+        if search:
+            query = data.get("query", "")
+            if not isinstance(query, str) or not 1 <= len(query.strip()) <= 200:
+                raise ImportProblem("Enter a name to search (up to 200 characters).")
+            brain = self.brain_factory(plan["target"])
+            brain.check_identity()
+            brain.require_preview(with_review=True)
+            result = brain.call("capture", {**item, "dry_run": True, "matching_search": query})
+            if result.get("writes") is not False or result.get("dry_run") is not True:
+                raise ImportProblem("Unexpected search response. Update Brain.")
+            return {"candidates": result.get("search_results", [])}
+        fingerprint, action = data.get("fingerprint"), data.get("action")
+        if action not in {"approve", "reject", "defer", "reset"}:
+            raise ImportProblem("Choose a match, leave unlinked, or review later.")
+        if not any(m.get("fingerprint") == fingerprint for m in preview["items"]):
+            raise ImportProblem("Choose a subject from this preview.")
+        choices = [
+            c
+            for c in item.get("import_review", {}).get("choices", [])
+            if c["fingerprint"] != fingerprint
+        ]
+        if action != "reset":
+            choices.append(
+                {
+                    "fingerprint": fingerprint,
+                    "action": action,
+                    "entity_id": data.get("entity_id") if action == "approve" else None,
+                }
+            )
+        if choices:
+            item["import_review"] = {"snapshot": preview.get("snapshot"), "choices": choices}
+        else:
+            item.pop("import_review", None)
+        validate(plan)
+
+        def run():
+            brain = self.brain_factory(plan["target"])
+            brain.check_identity()
+            brain.require_preview(with_review=True)
+            result = brain.call("capture", {**item, "dry_run": True})
+            if result.get("dry_run") is not True or result.get("writes") is not False:
+                raise ImportProblem("Unexpected review response. Nothing was imported.")
+            previews[index] = {"title": item["title"], "external_id": item["external_id"], **result}
+            stamp = str(time.time_ns())
+            path = self.directory / f"{stamp}.plan.json"
+            sha = save(plan, path)
+            with private_file(self.directory / f"{stamp}.preview.json") as stream:
+                json.dump({"plan_sha256": sha, "results": previews}, stream)
+            self.plan, self.preview, self.sha = plan, previews, sha
+            self.update(
+                phase="ready",
+                plan=summary(plan, sha),
+                plan_path=str(path),
+                preview=previews,
+                previewed_at=time.time(),
+                message="Choice saved locally. Nothing imported yet.",
+            )
+
+        return self.start("reviewing", run, required_phase="ready")
+
     def import_plan(self, confirmation):
         with self.lock:
             if self.state["phase"] != "ready" or not self.plan or confirmation != self.sha:
@@ -225,7 +300,7 @@ class Wizard:
             )
             self.update(
                 phase="complete",
-                message="Import finished. Review uncertain matches in Brain Sources.",
+                message="Import finished. Choices applied; remaining reviews are in Sources.",
             )
 
         return self.start("importing", run, required_phase="ready")
@@ -239,6 +314,10 @@ class Wizard:
             return inventory(data["path"])
         if path == "/api/preview":
             return self.dry_run(data)
+        if path == "/api/review":
+            return self.review_item(data)
+        if path == "/api/search":
+            return self.review_item(data, search=True)
         if path == "/api/import":
             return self.import_plan(data.get("sha256"))
         raise ImportProblem("Unknown action.")

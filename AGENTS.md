@@ -69,6 +69,9 @@ scope mismatch. Property-only revisions currently need an explicit future design
 
 The Obsidian UI lives in ui/ (Vite/React); local_ui.py serves it on loopback with a session key.
 Run `npm ci --prefix ui`, `npm run build --prefix ui` and `npm test --prefix ui`. Keep the backend
-matcher authoritative. A dry run must never fall back to capture on an older server. Never bypass
+matcher authoritative. Local human choices use the additive capture `import_review` contract,
+bound to its no-write snapshot; never infer choices from source text or apply them as a separate
+post-import write. Search candidates through audience-filtered `matching_search`, never a general
+firm search that can reveal identities to a wider audience. A dry run must never fall back to capture on an older server. Never bypass
 Host/Origin/session-key checks or allow a browser to provide arbitrary tool names, target accounts,
 shell commands or saved-plan paths. CI builds the UI into the wheel. See docs/local-ui.md.

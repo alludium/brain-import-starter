@@ -27,7 +27,7 @@ class SyntheticBrain:
     def check_identity(self):
         assert self.target["firm_id"] == "test"
 
-    def require_preview(self):
+    def require_preview(self, **kwargs):
         pass
 
     def call(self, tool, payload):
@@ -35,15 +35,19 @@ class SyntheticBrain:
             status = {"Acme": "automatic", "Conflict": "pending", "Unknown": "unmatched"}[
                 payload["title"]
             ]
-            return {
+            result = {
+                "snapshot": "a" * 64,
+                "search_results": [{"id": "birch", "name": "Birch", "type": "organization"}],
                 "dry_run": True,
                 "writes": False,
                 "disposition": "new",
                 "scope": payload["scope"],
                 "items": [
                     {
+                        "fingerprint": "b" * 64,
                         "status": status,
                         "evidence": {
+                            "type": "organization",
                             "name": payload["title"],
                             "domain": "acme.test",
                             "location": "properties.website",
@@ -55,6 +59,20 @@ class SyntheticBrain:
                     }
                 ],
             }
+            for choice in payload.get("import_review", {}).get("choices", []):
+                row = result["items"][0]
+                row.update(
+                    reviewed=True,
+                    entity_id=choice.get("entity_id"),
+                    status={"approve": "approved", "reject": "rejected", "defer": "deferred"}[
+                        choice["action"]
+                    ],
+                )
+                if choice.get("entity_id") == "birch":
+                    row["candidates"].append(
+                        {"id": "birch", "name": "Birch", "type": "organization"}
+                    )
+            return result
         return {"source_id": "src_" + payload["title"], "created": True, "scope": payload["scope"]}
 
 

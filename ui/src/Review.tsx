@@ -1,3 +1,4 @@
+import { MatchChoice, type Choice } from "./MatchChoice";
 import { useState } from "react";
 import type { State, Preview } from "./types";
 function category(p: Preview) {
@@ -14,6 +15,7 @@ export function Review({
   confirm,
   setConfirm,
   onImport,
+  onChoose,
 }: {
   state: State;
   dirty: boolean;
@@ -21,6 +23,7 @@ export function Review({
   confirm: boolean;
   setConfirm: (value: boolean) => void;
   onImport: () => void;
+  onChoose: (record: number, choice: Choice) => void;
 }) {
   const [tab, setTab] = useState("all");
   const [query, setQuery] = useState("");
@@ -126,7 +129,7 @@ export function Review({
                 </p>
               )}
               {p.items.map((m, i) => (
-                <article key={i}>
+                <article key={m.fingerprint || i}>
                   <div>
                     <strong>
                       {m.evidence.name ||
@@ -171,6 +174,16 @@ export function Review({
                       ))}
                     </ul>
                   )}
+                  {state.phase !== "complete" && (
+                    <MatchChoice
+                      key={state.plan!.sha256 + m.fingerprint}
+                      match={m}
+                      record={results.indexOf(p)}
+                      sha={state.plan!.sha256}
+                      disabled={busy || dirty || state.phase !== "ready"}
+                      onChoose={onChoose}
+                    />
+                  )}
                 </article>
               ))}
             </div>
@@ -181,7 +194,8 @@ export function Review({
       {state.phase !== "complete" && (
         <div className="confirm">
           <p>
-            Uncertain notes will be imported with pending matches in{" "}
+            Choose matches above, leave them unlinked, or review later. Any
+            unresolved matches will remain in{" "}
             <strong>Sources → Needs review</strong>. Unmatched notes stay
             unlinked. This imports every note in the snapshot, including those
             hidden by the filter.

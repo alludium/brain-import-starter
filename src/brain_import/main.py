@@ -17,6 +17,8 @@ def apply(plan, sha, confirmation, receipt_path, *, brain_factory=Brain, on_rece
         raise ImportProblem("Plan digest differs from --confirm; inspect the plan again.")
     brain = brain_factory(plan["target"])
     brain.check_identity()
+    if any(r.get("import_review") for r in plan["records"]):
+        brain.require_preview(with_review=True)
     # Open receipts before any writes; stop on the first error, preserving successes.
     with private_file(receipt_path) as receipts:
         for index, item in enumerate(plan["records"], start=1):

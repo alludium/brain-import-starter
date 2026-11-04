@@ -54,9 +54,13 @@ function App() {
   const [confirm, setConfirm] = useState(false);
   const busy =
     working ||
-    ["connecting", "signing_in", "previewing", "importing"].includes(
-      state.phase,
-    );
+    [
+      "connecting",
+      "signing_in",
+      "previewing",
+      "reviewing",
+      "importing",
+    ].includes(state.phase);
   const initialized = useRef(false);
   useEffect(() => {
     let active = true;
@@ -556,9 +560,11 @@ function App() {
                 <strong>
                   {state.phase === "importing"
                     ? state.message
-                    : state.phase === "previewing"
-                      ? "Checking your notes against Brain…"
-                      : "Connecting to Brain…"}
+                    : state.phase === "reviewing"
+                      ? "Saving your choice…"
+                      : state.phase === "previewing"
+                        ? "Checking your notes against Brain…"
+                        : "Connecting to Brain…"}
                 </strong>
                 {state.total > 0 && (
                   <>
@@ -572,12 +578,19 @@ function App() {
             )}
             {!!results.length && (
               <Review
-                key={state.plan?.sha256}
                 state={state}
                 dirty={dirty}
                 busy={busy}
                 confirm={confirm}
                 setConfirm={setConfirm}
+                onChoose={(record, choice) => {
+                  setConfirm(false);
+                  void action("review", {
+                    record,
+                    sha256: state.plan!.sha256,
+                    ...choice,
+                  });
+                }}
                 onImport={() =>
                   action("import", { sha256: state.plan!.sha256 })
                 }

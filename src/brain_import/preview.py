@@ -9,7 +9,10 @@ def preview_plan(plan, *, brain_factory=Brain, progress=None):
     validate(plan)
     brain = brain_factory(plan["target"])
     brain.check_identity()
-    brain.require_preview()
+    if any(r.get("import_review") for r in plan["records"]):
+        brain.require_preview(with_review=True)
+    else:
+        brain.require_preview()
     results = []
     for i, item in enumerate(plan["records"]):
         result = brain.call("capture", {**item, "dry_run": True})

@@ -1,9 +1,13 @@
 export type Folder = { path: string; count: number };
 export type Candidate = { id: string; name: string; type: string };
 export type Match = {
+  fingerprint?: string;
+  entity_id?: string;
+  reviewed?: boolean;
   status: string;
   reason: string;
   evidence: {
+    type?: string;
     name?: string;
     domain?: string;
     email?: string;

@@ -24,9 +24,25 @@ company/person identities. No production services, personal vault contents or li
 - The unmapped custom-property example remains unlinked, as does the unidentified contact. Mapping
   custom fields is explicit; the test does not imply support for every Obsidian plugin's schema.
 
+## Pre-import resolution — observed locally
+
+The same real CLI/backend flow was repeated with five explicit choices: confirm the conflicting
+company as Acme AI, search and confirm the meeting's company, confirm its attendee, leave one
+subject unlinked, and defer another. Preview, search and choice saves left all six database counts
+unchanged. Browser refresh retained the choices. The 11-note import preserved exact originals and
+private sharing, persisted three approvals, one rejection and one deferral with the reviewing
+actor, and left the eight automatic associations intact. The real Sources review filter showed
+only the deliberately deferred note. A fresh dry run and second import returned 11 unchanged,
+zero created. This is isolated synthetic acceptance, not hosted deployment evidence.
+
+The maintained browser journey covers candidate choice, audience search, changing a choice,
+rejection, deferral, refresh persistence and mobile accessibility. Backend MCP tests also reject
+stale snapshots, wrong-type/hidden identities, incompatible actions and replayed decisions without
+partial writes, and cover two reviewed notes shared with a newly created people audience.
+
 ## Automated coverage
 
-58 Python tests cover existing adapters plus preview capability gating, immutable snapshots,
+60 Python tests cover existing adapters plus preview capability gating, immutable snapshots,
 changed-match reconfirmation, partial failure receipts, local HTTP access controls, metadata-only
 vault discovery, folder profile hints and loopback-only development authentication.
 

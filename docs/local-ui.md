@@ -35,13 +35,22 @@ analytics, external fonts, a hosted upload service, or the assistant's conversat
    Authentication/request logs may still be recorded. This is separate from offline `plan`.
 5. **Review.** Search/filter notes and expand their evidence, candidate identities and reasons.
    Results show automatic matches, cases needing human review, and no active match. An unchanged
-   import retains earlier human decisions. Existing audience or evidence conflicts stop the run.
+   import retains earlier human decisions. For each unresolved subject, choose a suggested company
+   or person, search another existing identity, **Leave unlinked**, or **Review later**. Search is
+   limited to identities visible to the note's audience and of the same type. **Confirmed by you**
+   distinguishes your decision from an automatic match; **Change choice** resets a local choice.
+   Every change saves a new private plan and clears import confirmation. Nothing is filed yet.
+   Existing audience or evidence conflicts stop the run. Already settled decisions stay in Sources;
+   a note without any supported subject clues needs its property/folder mapping adjusted first.
 6. **Import.** Tick the confirmation and import the full snapshot. Filters do not exclude records.
    The app rechecks identity, sharing and matches before writing. Changed results require another
    confirmation. The backend checks again during each write; concurrent changes can still alter
-   matching or stop a run. There is no reservation or batch transaction.
+   matching or stop a run. Human choices are checked against their preview snapshot and applied
+   atomically with each note. A stale choice stops that note without storing it: run a fresh dry run
+   and review again. There is no reservation or batch transaction.
 7. **Follow through.** Completion shows created/versioned and unchanged counts. Resolve uncertain
-   matches in Brain **Sources → Needs review**. Unmatched notes remain unlinked.
+   matches you deferred or left unresolved in Brain **Sources → Needs review**. Rejected and unmatched
+   subjects remain unlinked.
 
 Changing any setting invalidates the UI confirmation. Source edits after preview do not change
 the saved snapshot; run another dry run to include them. Keep the collection ID stable across
@@ -63,7 +72,8 @@ local server and can interrupt the current operation. A timed-out write may have
 
 An older Brain server is blocked by schema discovery **before any capture payload is sent**.
 Do not remove `dry_run` or `preserve_audience` to work around that message. The matching-preview
-backend must be released first. This repository cannot deploy it by itself.
+backend must be released first. Resolving/searching also requires advertised `import_review` and
+`matching_search` capture fields. This repository cannot deploy it by itself.
 
 ## CLI preview and development
 

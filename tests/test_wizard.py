@@ -34,7 +34,7 @@ class FakeBrain:
     def check_identity(self):
         assert self.target["firm_id"] == "firm_test"
 
-    def require_preview(self):
+    def require_preview(self, **kwargs):
         pass
 
     def call(self, tool, payload):
@@ -54,7 +54,7 @@ class FakeBrain:
 
 def wait(wizard):
     deadline = time.monotonic() + 5
-    while wizard.public()["phase"] in {"connecting", "previewing", "importing"}:
+    while wizard.public()["phase"] in {"connecting", "previewing", "reviewing", "importing"}:
         assert time.monotonic() < deadline
         time.sleep(0.01)
     return wizard.public()
@@ -223,3 +223,73 @@ def test_local_token_context_exception_never_applies_to_hosted(monkeypatch):
     monkeypatch.delenv("BRAIN_ACCESS_TOKEN")
     with pytest.raises(ImportProblem, match="workspace context"):
         Brain({"server": "http://127.0.0.1:8765/mcp"}).identity()
+
+
+def test_choices_saved_to_digest_reset_and_forwarded_atomically(setup):
+    wizard, options, _ = setup
+
+    class ReviewBrain(FakeBrain):
+        def call(self, tool, payload):
+            result = super().call(tool, payload)
+            if payload.get("dry_run"):
+                result["snapshot"] = "a" * 64
+                result["items"] = [{"fingerprint": "b" * 64, "status": "pending", "candidates": []}]
+                result["search_results"] = [{"id": "acme", "name": "Acme", "type": "organization"}]
+                for choice in payload.get("import_review", {}).get("choices", []):
+                    result["items"][0].update(status=choice["action"], reviewed=True)
+            return result
+
+    wizard.brain_factory = ReviewBrain
+    wizard.dry_run(options)
+    assert wait(wizard)["phase"] == "ready"
+    old = wizard.sha
+    search = wizard.review_item({"sha256": old, "record": 0, "query": "Acme"}, search=True)
+    assert search["candidates"][0]["id"] == "acme"
+    assert wizard.sha == old
+    for action, entity in [("approve", "acme"), ("reset", None), ("reject", None), ("defer", None)]:
+        wizard.review_item(
+            {
+                "sha256": wizard.sha,
+                "record": 0,
+                "fingerprint": "b" * 64,
+                "action": action,
+                "entity_id": entity,
+            }
+        )
+        state = wait(wizard)
+        assert state["phase"] == "ready", state
+        assert Path(state["plan_path"]).stat().st_mode & 0o777 == 0o600
+        if action == "reset":
+            assert wizard.sha == old
+        else:
+            assert wizard.sha != old
+            assert wizard.plan["records"][0]["import_review"]["choices"][0]["action"] == action
+    with pytest.raises(ImportProblem):
+        wizard.review_item({"sha256": old, "record": 0, "action": "reject"})
+    assert all(p.get("dry_run") for p in FakeBrain.calls)
+    wizard.import_plan(wizard.sha)
+    assert wait(wizard)["phase"] == "complete"
+    assert FakeBrain.calls[-1]["import_review"]["choices"][0]["action"] == "defer"
+
+
+def test_review_capability_is_required_before_capture(monkeypatch):
+    monkeypatch.setattr(
+        "subprocess.run",
+        lambda *a, **kw: SimpleNamespace(
+            returncode=0,
+            stdout=json.dumps(
+                {
+                    "tools": [
+                        {
+                            "name": "capture",
+                            "inputSchema": {
+                                "properties": {"dry_run": {"type": "boolean"}, "matching": {}}
+                            },
+                        }
+                    ]
+                }
+            ),
+        ),
+    )
+    with pytest.raises(ImportProblem, match="Nothing was imported"):
+        Brain({}).require_preview(with_review=True)

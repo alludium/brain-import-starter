@@ -90,7 +90,7 @@ class Brain:
                 "Cannot finish sign-in. Check the Brain CLI and try again."
             ) from None
 
-    def require_preview(self):
+    def require_preview(self, *, with_review=False):
         # Discover before ever sending capture: older servers must not silently ignore dry_run.
         try:
             result = subprocess.run(
@@ -105,6 +105,8 @@ class Brain:
             capture = next(t for t in tools if t.get("name") == "capture")
             fields = capture["inputSchema"]["properties"]
             if fields.get("dry_run", {}).get("type") != "boolean" or "matching" not in fields:
+                raise ValueError
+            if with_review and not {"import_review", "matching_search"} <= fields.keys():
                 raise ValueError
         except (
             OSError,

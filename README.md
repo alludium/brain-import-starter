@@ -141,3 +141,7 @@ Brain imports need your own scoped acceptance run; automated tests are not evide
 Structured imports require the matching-review backend release. Check the tool fields described
 in [matching and sharing](docs/matching-and-sharing.md) before live apply. Offline examples do not
 require a Brain connection.
+
+The wizard can resolve uncertain subjects before import: choose a candidate, search another
+existing company/person, leave unlinked, or defer to Sources. Choices are saved locally and checked
+again when importing. See [the review flow](docs/local-ui.md).
