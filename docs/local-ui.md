@@ -58,6 +58,39 @@ repeat imports; when moving from CLI configuration, reuse its exact namespace. U
 For mixed property schemas, use separate selections or configure `source.folder_rules[].fields`
 in code. Inline `Field:: value` properties are not parsed.
 
+## Understand the settings and match reasons
+
+Use the ⓘ button beside a setting for its explanation and an example. Buttons work with the
+keyboard and on mobile; Escape, Close explanation or a click outside dismisses the help.
+
+- **Collection ID** identifies this vault's imports. Combined with the note path (or stable ID),
+  it lets repeat imports find the same source. Keep it unchanged and use a different label for
+  another vault. Changing it can create duplicates.
+- **Maximum notes** is a safety limit on selected non-empty Markdown files, not entities or
+  relationships. Exceeding it stops planning; it never silently takes the first N notes.
+- **Stable ID property** is optional. Normally the file path identifies a note. To preserve identity
+  across renames/moves, set a property name such as `brain_id` before the first import and add a
+  unique permanent text value to every selected note, through Obsidian Properties or the YAML
+  block at the top. Missing or duplicate values fail. Enabling it later changes identities.
+- **Property mappings** are the names of properties, not the values. For `website: https://acme.ai`
+  in a note, enter `website`; for `URL: https://acme.ai`, enter `URL`. Names are case-sensitive.
+  The inline example changes as you edit a mapping. Leave unused mappings blank. The importer
+  reads these properties; it does not create or rename them in your vault.
+- **Company website** applies when no main person was extracted. **Person’s company website**
+  identifies the employer when a main person is present. It is not a fallback for meeting notes.
+  You can map both to `website` if that is what your vault uses. Meeting participants are names,
+  including wikilinks; their linked notes are not followed to fetch email addresses.
+- **Sharing** applies to the selected notes. Everyone means this Brain workspace, not the public
+  internet. Existing notes' audiences are preserved; this is not source permission mirroring.
+
+Review now separates **Extracted from this note** from **Compared with records in Brain**.
+Each candidate shows the clues it matched and its audience-visible website/email, with a link to
+inspect the record. For example, `company: Acme AI` plus `website: https://kestreldata.nl` can point
+to different companies: the reason names the conflict explicitly. A single candidate still needs
+confirmation when only a name was extracted. “Not extracted” means the current mappings supplied
+no identifier for that subject; it does not assert that the original note contains no website.
+An older server without the additive candidate details keeps its original reason text.
+
 ## Saved files and failures
 
 `.local/ui/` contains private plan, settings, preview and receipt files (permissions 0600). Plans

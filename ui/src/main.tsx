@@ -1,3 +1,4 @@
+import { FieldLabel, fieldGuides } from "./FieldHelp";
 import { api } from "./api";
 import { Review } from "./Review";
 import type { State, Settings, Folder } from "./types";
@@ -411,20 +412,39 @@ function App() {
                     <details>
                       <summary>Selection and stable identity</summary>
                       <div className="two">
-                        <label>
-                          Collection ID
+                        <div className="field">
+                          <FieldLabel id="collection-id" title="Collection ID">
+                            A unique label for this vault’s imports, such as
+                            northwind-notes. Brain combines it with each note’s
+                            file path (or stable ID) to recognise the same note
+                            on later imports. Keep it unchanged to update
+                            existing notes; changing it can create duplicates.
+                            Use a different label for another vault.
+                          </FieldLabel>
                           <input
+                            id="collection-id"
                             value={namespace}
                             onChange={(e) => {
                               setNamespace(e.target.value);
                               changed();
                             }}
                           />
-                          <small>Keep this unchanged on repeat imports.</small>
-                        </label>
-                        <label>
-                          Maximum notes
+                          <small>
+                            Identifies this vault’s imports so repeat runs
+                            update the same notes.
+                          </small>
+                        </div>
+                        <div className="field">
+                          <FieldLabel id="maximum-notes" title="Maximum notes">
+                            A safety limit on the number of non-empty Markdown
+                            notes selected for one run. It counts files, not
+                            companies, people or links. If your selection
+                            exceeds this limit, the dry run stops: it does not
+                            silently take the first few notes. Choose fewer
+                            folders or increase the limit (up to 5,000).
+                          </FieldLabel>
                           <input
+                            id="maximum-notes"
                             type="number"
                             min="1"
                             max="5000"
@@ -434,20 +454,56 @@ function App() {
                               changed();
                             }}
                           />
-                        </label>
-                        <label>
-                          Exclude patterns (one per line)
+                          <small>
+                            Stops the run if the selection is larger; never
+                            silently skips the rest.
+                          </small>
+                        </div>
+                        <div className="field">
+                          <FieldLabel
+                            id="exclude-patterns"
+                            title="Exclude patterns (one per line)"
+                          >
+                            Skip files whose path inside the vault matches a
+                            pattern. For example, Archive/* skips notes under
+                            Archive, including its subfolders. * means any
+                            characters. Enter one pattern per line. These files
+                            will not be previewed or imported.
+                          </FieldLabel>
                           <textarea
+                            id="exclude-patterns"
                             value={exclude}
                             onChange={(e) => {
                               setExclude(e.target.value);
                               changed();
                             }}
                           />
-                        </label>
-                        <label>
-                          Stable ID property (optional)
+                        </div>
+                        <div className="field">
+                          <FieldLabel
+                            id="stable-id"
+                            title="Stable ID property (optional)"
+                          >
+                            Usually leave this blank: the note’s path identifies
+                            it. Enable it before your first import if you plan
+                            to rename or move notes. Enter an Obsidian property
+                            name here, such as brain_id, and add a unique text
+                            value to that property on every selected note. Keep
+                            each value unchanged when moving or renaming the
+                            note. You can add it in Obsidian’s Properties panel
+                            or in the YAML block at the very top of the Markdown
+                            file:
+                            <pre>
+                              {
+                                "---\nbrain_id: acme-meeting-001\n---\n# Meeting with Acme"
+                              }
+                            </pre>
+                            Missing or repeated values stop the run. Enabling
+                            this after importing changes note identities and can
+                            create duplicates.
+                          </FieldLabel>
                           <input
+                            id="stable-id"
                             placeholder="brain_id"
                             value={identity}
                             onChange={(e) => {
@@ -456,10 +512,10 @@ function App() {
                             }}
                           />
                           <small>
-                            Set before the first import. Required on every
-                            selected note if enabled.
+                            Optional protection against duplicate notes after a
+                            rename or move.
                           </small>
-                        </label>
+                        </div>
                       </div>
                     </details>
                   </>
@@ -475,27 +531,81 @@ function App() {
               </div>
               <fieldset disabled={busy}>
                 <p>
-                  Map your Obsidian properties to the identity clues Brain
-                  should check.
+                  Tell the importer what your Obsidian properties are called.
+                  These are the fields at the top of a note in Obsidian’s
+                  Properties panel, saved between --- lines in Markdown. These
+                  boxes contain property names, not company names, websites or
+                  email addresses.
                 </p>
+                <div className="mapping-example">
+                  <strong>Example: a company note in Obsidian</strong>
+                  <pre>
+                    {
+                      "---\ncompany: Acme AI\nwebsite: https://acme.ai\n---\n# Meeting with Acme AI"
+                    }
+                  </pre>
+                  <p>
+                    With this note, set <strong>Company name</strong> to{" "}
+                    <code>company</code> and <strong>Company website</strong> to{" "}
+                    <code>website</code>. If your note uses{" "}
+                    <code>URL: https://acme.ai</code>, enter <code>URL</code>{" "}
+                    instead. Property names must match exactly, including
+                    capitals.
+                  </p>
+                  <p>
+                    Leave mappings blank if unused. Missing properties are
+                    ignored. These settings read your notes; they do not add or
+                    rename properties in Obsidian. Without properties, a
+                    company/person folder can use the heading as a name to
+                    review.
+                  </p>
+                </div>
+                <h3>Which Obsidian property contains each value?</h3>
                 <div className="two">
                   {Object.entries(fields).map(([k, v]) => (
-                    <label key={k}>
-                      {labels[k]}
+                    <div className="field" key={k}>
+                      <FieldLabel id={"mapping-" + k} title={labels[k]}>
+                        {fieldGuides[k].help}
+                      </FieldLabel>
                       <input
+                        id={"mapping-" + k}
+                        placeholder="Property name, or leave blank"
                         value={v}
                         onChange={(e) => {
                           setFields({ ...fields, [k]: e.target.value });
                           changed();
                         }}
                       />
-                    </label>
+                      <small>
+                        {v ? (
+                          <>
+                            Example in your note:{" "}
+                            <code>
+                              {v}: {fieldGuides[k].example}
+                            </code>
+                          </>
+                        ) : (
+                          "Not used in this import."
+                        )}
+                      </small>
+                    </div>
                   ))}
                 </div>
                 <div className="sharing">
-                  <label>
-                    Who can read these notes?
+                  <div className="field">
+                    <FieldLabel
+                      id="sharing-scope"
+                      title="Who can read these notes?"
+                    >
+                      Choose who can read the imported notes in Brain. Only me
+                      keeps them private. Everyone means members of this Brain
+                      workspace, not the public internet. Specific people and
+                      groups must already exist in Brain. This applies to all
+                      selected notes, and does not copy Obsidian permissions or
+                      change existing notes’ sharing.
+                    </FieldLabel>
                     <select
+                      id="sharing-scope"
                       value={scope}
                       onChange={(e) => {
                         setScope(e.target.value);
@@ -510,7 +620,7 @@ function App() {
                       <option value="people">Specific people</option>
                       <option value="group">An existing group</option>
                     </select>
-                  </label>
+                  </div>
                   {["people", "group"].includes(scope) && (
                     <label>
                       {scope === "people"

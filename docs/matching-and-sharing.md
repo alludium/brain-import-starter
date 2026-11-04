@@ -20,6 +20,10 @@ The backend makes no AI calls for these matches and does not invent percentage c
 The [local Obsidian wizard](local-ui.md), or `brain-import preview PLAN`, asks the same backend
 matcher for candidates without storing sources or decisions. It shows new/revision/unchanged,
 automatic/pending/unmatched evidence, and retains prior human decisions on unchanged notes.
+The wizard explains the extracted name and website/email separately from what each candidate
+matches in Brain. Candidate details only include names and identifiers visible to the selected
+audience. One name-only candidate still needs confirmation; a conflict explicitly says which
+record matches the name and which matches the website/email. No percentage score overrides this.
 Unresolved subjects can be confirmed, left unlinked or deferred in the wizard before import.
 Search another existing identity of the same type if the suggested candidates are wrong. Search
 respects the selected audience. Your choices are saved in `import_review` in the exact plan, with

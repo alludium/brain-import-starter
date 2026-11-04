@@ -1,3 +1,4 @@
+import { CandidateFacts } from "./MatchExplanation";
 import { useState } from "react";
 import { api } from "./api";
 import type { Candidate, Match } from "./types";
@@ -109,9 +110,12 @@ export function MatchChoice({
         <div className="candidate-choices" aria-live="polite">
           {found.length ? (
             found.map((c) => (
-              <button key={c.id} onClick={() => choose("approve", c.id)}>
-                Choose {c.name}
-              </button>
+              <div className="search-candidate" key={c.id}>
+                <button onClick={() => choose("approve", c.id)}>
+                  Choose {c.name}
+                </button>
+                <CandidateFacts candidate={c} />
+              </div>
             ))
           ) : (
             <p>No identities of this type found. Try a different name.</p>

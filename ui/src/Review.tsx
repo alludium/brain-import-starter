@@ -1,3 +1,4 @@
+import { MatchExplanation } from "./MatchExplanation";
 import { MatchChoice, type Choice } from "./MatchChoice";
 import { useState } from "react";
 import type { State, Preview } from "./types";
@@ -150,30 +151,7 @@ export function Review({
                       )[m.status] || m.status}
                     </span>
                   </div>
-                  <p>{m.reason}</p>
-                  <p className="hint">
-                    Evidence:{" "}
-                    {[
-                      m.evidence.location,
-                      m.evidence.domain,
-                      m.evidence.email,
-                      m.evidence.role,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                  {!!m.candidates.length && (
-                    <ul>
-                      {m.candidates.map((c) => (
-                        <li key={c.id}>
-                          {c.name}{" "}
-                          <span className="muted">
-                            · {c.type === "organization" ? "Company" : "Person"}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  <MatchExplanation match={m} viewer={viewer} />
                   {state.phase !== "complete" && (
                     <MatchChoice
                       key={state.plan!.sha256 + m.fingerprint}

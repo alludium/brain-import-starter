@@ -40,6 +40,26 @@ rejection, deferral, refresh persistence and mobile accessibility. Backend MCP t
 stale snapshots, wrong-type/hidden identities, incompatible actions and replayed decisions without
 partial writes, and cover two reviewed notes shared with a newly created people audience.
 
+## Guidance and matching explanations — observed locally
+
+The actual synthetic vault was re-read through the CLI and isolated backend after adding field
+help and candidate evidence. It still returned 6 matched notes, 3 needing review and 2 without an
+active match. All six database counts remained unchanged. No notes were imported in this run.
+
+The conflicting note really has `company: Acme AI` and `website: https://kestreldata.nl`: the live
+preview now shows the name matching Acme AI and the website matching Kestrel Data. The meeting
+note has `company_website`, while its current company mapping reads `website`, so no company
+identifier was extracted. Its attendee supplies Maya's name without an email. Both one-candidate
+cases correctly stay pending and explain why. These results are computed from files and the
+backend; they are not hard-coded demo rows. Only the maintained browser test uses fake transport.
+
+Keyboard help opening, Escape/focus return, narrow-screen stable-ID instructions, property
+examples, conflict evidence, one-candidate review, candidate choices and refresh were checked.
+Fresh desktop/mobile screenshots were inspected; an inherited flex rule that compressed the
+evidence into narrow columns was fixed and a layout assertion added. Axe passes with help open
+and with multiple review subjects expanded. Candidate metadata tests exclude private identifier
+canaries from a firm-audience preview/search. Matching policy is unchanged.
+
 ## Automated coverage
 
 60 Python tests cover existing adapters plus preview capability gating, immutable snapshots,

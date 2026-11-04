@@ -37,7 +37,14 @@ class SyntheticBrain:
             ]
             result = {
                 "snapshot": "a" * 64,
-                "search_results": [{"id": "birch", "name": "Birch", "type": "organization"}],
+                "search_results": [
+                    {
+                        "id": "birch",
+                        "name": "Birch",
+                        "type": "organization",
+                        "websites": ["birch.test"],
+                    }
+                ],
                 "dry_run": True,
                 "writes": False,
                 "disposition": "new",
@@ -48,19 +55,62 @@ class SyntheticBrain:
                         "status": status,
                         "evidence": {
                             "type": "organization",
-                            "name": payload["title"],
-                            "domain": "acme.test",
-                            "location": "properties.website",
+                            "name": "Acme" if payload["title"] != "Unknown" else "Unknown",
+                            "domain": "kestrel.test"
+                            if payload["title"] == "Conflict"
+                            else "acme.test",
+                            "location": "properties.company",
                         },
                         "reason": "Synthetic browser fixture: identifier check.",
                         "candidates": []
                         if status == "unmatched"
-                        else [{"id": "acme", "name": "Acme", "type": "organization"}],
+                        else [
+                            {
+                                "id": "acme",
+                                "name": "Acme",
+                                "type": "organization",
+                                "websites": ["acme.test"],
+                                "matched_on": ["name", "website"]
+                                if status == "automatic"
+                                else ["name"],
+                            }
+                        ],
                     }
                 ],
             }
+            if payload["title"] == "Conflict":
+                result["items"][0]["candidates"].append(
+                    {
+                        "id": "kestrel",
+                        "name": "Kestrel",
+                        "type": "organization",
+                        "websites": ["kestrel.test"],
+                        "matched_on": ["website"],
+                    }
+                )
+                result["items"].append(
+                    {
+                        "fingerprint": "c" * 64,
+                        "status": "pending",
+                        "evidence": {
+                            "type": "person",
+                            "name": "Maya",
+                            "location": "properties.attendees",
+                        },
+                        "reason": "Name alone needs confirmation.",
+                        "candidates": [
+                            {
+                                "id": "maya",
+                                "name": "Maya",
+                                "type": "person",
+                                "emails": ["maya@acme.test"],
+                                "matched_on": ["name"],
+                            }
+                        ],
+                    }
+                )
             for choice in payload.get("import_review", {}).get("choices", []):
-                row = result["items"][0]
+                row = next(r for r in result["items"] if r["fingerprint"] == choice["fingerprint"])
                 row.update(
                     reviewed=True,
                     entity_id=choice.get("entity_id"),

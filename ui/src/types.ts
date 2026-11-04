@@ -1,5 +1,12 @@
 export type Folder = { path: string; count: number };
-export type Candidate = { id: string; name: string; type: string };
+export type Candidate = {
+  id: string;
+  name: string;
+  type: string;
+  matched_on?: string[];
+  websites?: string[];
+  emails?: string[];
+};
 export type Match = {
   fingerprint?: string;
   entity_id?: string;

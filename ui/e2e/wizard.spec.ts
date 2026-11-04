@@ -59,6 +59,33 @@ test("select, map, preview, filter, invalidate and import with explicit confirma
   await page.getByRole("button", { name: "Load folders" }).click();
   await page.getByRole("checkbox", { name: /Notes\s*3 files/ }).check();
   await page.getByLabel("Note type for Notes").selectOption("organization");
+  await page
+    .getByText("Selection and stable identity", { exact: true })
+    .click();
+  for (const [name, description] of [
+    ["Collection ID", "changing it can create duplicates"],
+    ["Maximum notes", "It counts files, not companies, people or links"],
+    ["Stable ID property (optional)", "brain_id: acme-meeting-001"],
+    ["Company website", "when no main person is extracted"],
+    ["Person’s company website", "not an automatic fallback"],
+    ["Who can read these notes?", "not the public internet"],
+  ]) {
+    const button = page.getByRole("button", {
+      name: "About " + name,
+      exact: true,
+    });
+    await button.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator(".help-popover:popover-open")).toContainText(
+      description,
+    );
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".help-popover:popover-open")).toHaveCount(0);
+    await expect(button).toBeFocused();
+  }
+  await expect(page.locator(".mapping-example")).toContainText(
+    "Property names must match exactly",
+  );
   await page.getByRole("button", { name: "Run dry run" }).click();
   await expect(
     page.getByRole("heading", { name: "Your dry run" }),
@@ -80,11 +107,31 @@ test("select, map, preview, filter, invalidate and import with explicit confirma
   await expect(page.locator(".note")).toHaveCount(1);
   await page.locator(".note summary").click();
   await expect(
-    page.getByText("Synthetic browser fixture: identifier check.", {
-      exact: true,
-    }),
+    page.getByText(
+      /The extracted name “Acme” matches “Acme” in Brain, but the website “kestrel.test” matches “Kestrel”/,
+    ),
   ).toBeVisible();
+  await expect(
+    page.getByText(
+      /Brain found one candidate, “Maya”, but a name alone does not prove/,
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Email in Brain: maya@acme.test", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Matches extracted website", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Open Kestrel in Brain" }),
+  ).toHaveAttribute("href", "https://brain.example/companies/kestrel");
   await page.getByRole("button", { name: "All notes", exact: true }).click();
+  const extracted = page.locator(".note[open] .extracted-clues").first();
+  const known = page.locator(".note[open] .known-records").first();
+  const extractedBox = await extracted.boundingBox();
+  const knownBox = await known.boundingBox();
+  expect(knownBox!.y).toBeGreaterThan(extractedBox!.y + extractedBox!.height);
+  expect(extractedBox!.width).toBeGreaterThan(500);
   await page.getByLabel("Search preview notes").fill("Unknown");
   await expect(page.locator(".note")).toHaveCount(1);
   await page.getByLabel("Search preview notes").fill("");
@@ -97,6 +144,9 @@ test("select, map, preview, filter, invalidate and import with explicit confirma
     fullPage: true,
   });
   await page.getByLabel("Company name", { exact: true }).fill("Company");
+  await expect(
+    page.getByText("Company: Acme AI", { exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByText("Settings changed. Run a new dry run before importing."),
   ).toBeVisible();
@@ -125,7 +175,11 @@ test("select, map, preview, filter, invalidate and import with explicit confirma
   ).toBeVisible();
   await conflict.getByRole("button", { name: "Change choice" }).click();
   await conflict.getByLabel("Search another company").fill("Birch");
-  await conflict.getByRole("button", { name: "Search Brain" }).click();
+  await conflict
+    .locator("article")
+    .filter({ has: page.getByLabel("Search another company") })
+    .getByRole("button", { name: "Search Brain" })
+    .click();
   await conflict
     .getByRole("button", { name: "Choose Birch", exact: true })
     .click();
@@ -148,6 +202,21 @@ test("select, map, preview, filter, invalidate and import with explicit confirma
     "Review later in Sources",
   );
   await page.setViewportSize({ width: 390, height: 844 });
+  await page
+    .getByText("Selection and stable identity", { exact: true })
+    .click();
+  await page
+    .getByRole("button", {
+      name: "About Stable ID property (optional)",
+      exact: true,
+    })
+    .click();
+  await expect(page.locator(".help-popover:popover-open")).toContainText(
+    "Obsidian’s Properties panel",
+  );
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.screenshot({ path: "test-results/help-mobile.png" });
+  await page.getByRole("button", { name: "Close explanation" }).click();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   expect(
     await page.evaluate(
