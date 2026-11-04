@@ -23,14 +23,37 @@ class Brain:
                 timeout=180,
                 check=False,
             )
-        except (OSError, subprocess.TimeoutExpired) as exc:
+        except FileNotFoundError as exc:
             raise ImportProblem(
-                "Brain CLI unavailable or timed out; check installation and login."
+                "Brain CLI not found on PATH. Install it, then check brain --version."
+            ) from exc
+        except subprocess.TimeoutExpired as exc:
+            raise ImportProblem(
+                "Brain CLI timed out. A write may already have succeeded; "
+                "review receipts before retrying."
+            ) from exc
+        except OSError as exc:
+            raise ImportProblem(
+                "Cannot start Brain CLI. Check brain --version in this terminal."
             ) from exc
         if result.returncode:
-            # stderr and MCP error text may echo source contents or credentials.
+            # Recognize only locally authored CLI diagnostics; never echo raw stderr.
+            if result.stderr.startswith("Sign-in required. Run brain login first;"):
+                raise ImportProblem(
+                    "Brain CLI is not signed in. Run brain login, then retry identity."
+                )
+            if result.stderr.startswith(
+                "Cannot access Alludium Brain CLI credentials in the OS keyring."
+            ):
+                raise ImportProblem(
+                    "Brain CLI credential access needs attention. Run brain login yourself; "
+                    "follow its explanation before allowing any Keychain prompt."
+                )
+            # Other stderr and MCP error text may echo source contents or credentials.
             raise ImportProblem(
-                "Brain call failed; check CLI login, permissions and live tool schema."
+                "Brain call failed. First check brain --version, then brain login; "
+                "if both work, check permissions and the live tool schema. "
+                "CLI output was withheld because it may contain private data."
             )
         try:
             data = json.loads(result.stdout)

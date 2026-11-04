@@ -341,3 +341,44 @@ def test_command_plan_never_invokes_brain(tmp_path):
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout)["count"] == 1
     assert "fictional robotics" not in result.stdout
+
+
+@pytest.mark.parametrize(
+    "error, message",
+    [
+        (FileNotFoundError("PRIVATE"), "not found on PATH"),
+        (PermissionError("PRIVATE"), "Cannot start Brain CLI"),
+        (subprocess.TimeoutExpired("PRIVATE", 180), "write may already have succeeded"),
+    ],
+)
+def test_cli_failures_have_safe_actionable_guidance(monkeypatch, error, message):
+    def fail(*args, **kwargs):
+        raise error
+
+    monkeypatch.setattr(subprocess, "run", fail)
+    with pytest.raises(ImportProblem, match=message) as exc:
+        Brain({"server": "https://example.test/mcp"}).call("capture", {"text": "PRIVATE"})
+    assert "PRIVATE" not in str(exc.value)
+
+
+@pytest.mark.parametrize(
+    "diagnostic, guidance",
+    [
+        ("Sign-in required. Run brain login first; PRIVATE", "not signed in"),
+        (
+            "Cannot access Alludium Brain CLI credentials in the OS keyring. PRIVATE",
+            "before allowing",
+        ),
+    ],
+)
+def test_known_login_errors_are_actionable_without_echoing_stderr(
+    monkeypatch, diagnostic, guidance
+):
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *a, **kw: subprocess.CompletedProcess([], 1, stdout="", stderr=diagnostic),
+    )
+    with pytest.raises(ImportProblem, match=guidance) as exc:
+        Brain({"server": "https://example.test/mcp"}).identity()
+    assert "PRIVATE" not in str(exc.value)

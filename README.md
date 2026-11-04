@@ -43,7 +43,7 @@ Open the folder in Claude Code or Codex and start with:
 1. Install the CLI wheel from [Brain downloads](https://github.com/alludium/brain-plugin/tree/main/downloads)
    with `uv tool install ./alludium_brain_cli-<version>-py3-none-any.whl`.
    This starter requires CLI **0.29.100 or later** and the `capture` and `configure(account={})` tools.
-2. Run `brain login`, then `uv run brain-import identity`. Check the workspace and person.
+2. Run `brain --version` to check that the CLI starts, then `brain login` and `uv run brain-import identity`. Check the workspace and person.
    Put its exact `firm_id` and `user_id` in your configuration.
 3. Copy `config.example.toml` to `config.local.toml`. Follow the
    [Obsidian](docs/obsidian.md) or [Notion](docs/notion.md) guide to select your sources.
@@ -72,6 +72,22 @@ reuses unchanged records and versions changed text under a stable source ID. Thi
 transaction: earlier successful records remain stored. A timeout may occur after a successful
 write; retrying recovers through the same source identity. Don't run concurrent imports for the
 same source, change accounts mid-run, or replay old plans after newer versions have been imported.
+
+## If the first run fails
+
+- **`brain` is missing:** it is a separate tool, not installed by `uv sync`. Install the downloaded
+  wheel, ensure the uv tool directory is on PATH, then check `brain --version` in the same terminal.
+- **`brain --version` crashes:** this is an installation problem, before authentication. On a Mac
+  with both Intel and Apple Silicon Python installations, select a native Python 3.12+ explicitly:
+  `uv tool install --force --python /path/to/native/python /path/to/the/downloaded.whl`.
+  Verify the chosen interpreter with `python -c 'import platform; print(platform.machine())'`.
+  Do not work around certificate or authentication checks.
+- **Version works but identity fails:** run `brain login` yourself and complete browser sign-in,
+  then retry `uv run brain-import identity`. The importer suppresses raw CLI errors because they
+  may contain source text or credentials.
+- **Notion works in your assistant but not here:** the assistant's Notion connection is separate.
+  The standalone importer needs its own read-content connection, access to the selected pages and
+  a local `NOTION_TOKEN`. See [Notion setup](docs/notion.md); do not copy assistant OAuth credentials.
 
 ## What you get
 

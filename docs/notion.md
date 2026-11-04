@@ -3,6 +3,9 @@
 The live reader fetches **only the page IDs you list**. It uses Notion's read-only page and
 Markdown endpoints, API version `2026-03-11`, Markdown `v2`. It does not search your workspace.
 
+An existing Notion connection in Claude, Codex or ChatGPT does not authenticate this script.
+You do not need to reconnect that assistant: configure a separate API connection for this importer.
+
 Create a Notion connection with read-content capability and grant it access to the selected pages.
 Store its secret in `NOTION_TOKEN` locally using your shell or secret manager; never paste it into
 chat or commit it. Copy config.example.toml to config.local.toml and replace its source section:
