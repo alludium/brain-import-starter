@@ -18,6 +18,17 @@ the filename. Source identity is `obsidian` + `<namespace>:<vault-relative-path>
 keeps the identity, renaming/moving a note changes it. Brain may also deduplicate identical text.
 An `obsidian://open` link preserves a way back to the original, usable on a device with that vault.
 
+Brain can attach imported documents to existing companies and people by matching known names,
+aliases and email addresses in the text. The importer does not need to send note bodies through
+the assistant to do this. Check the saved source's `entities` and the entity brief after a small
+trial: a successful capture alone does not prove correct matching. Short or common names need
+particular care; matching is not a guarantee that every mention was understood in context.
+
+These records remain `document` sources, including Markdown files in a Meetings folder.
+That does not automatically create a dated meeting interaction, extract new entities or facts,
+or turn wikilinks into relationship edges. An adapter that needs those behaviors must explicitly
+model them and test them against the current Brain tool schema.
+
 This does not interpret wikilinks as Brain entity relationships, import `.canvas` files, resolve
 transclusions, or copy attachments. Embedded images and file links stay as text references.
 If you need original PDF/Office attachments, the existing CLI's `brain upload` is available;
