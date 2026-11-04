@@ -2,7 +2,8 @@
 
 **Your sources → a small Python script → your firm's Brain.**
 
-A starter repository to clone, understand and change with Claude Code or Codex.
+This repository is private; you need access granted by Alludium before cloning or using the template.
+Once you have access, clone it, understand it and change it with Claude Code or Codex.
 Read an Obsidian vault or selected Notion pages, review a local plan, then import
 through the [Alludium Brain CLI](https://github.com/alludium/brain-plugin#alludium-brain-cli).
 Source text travels from your script to Brain without passing through an assistant's conversation.
