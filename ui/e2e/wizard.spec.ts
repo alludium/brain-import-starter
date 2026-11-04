@@ -1,10 +1,15 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, execFileSync, type ChildProcess } from "node:child_process";
 let server: ChildProcess;
 let info: { url: string; vault: string };
 test.beforeAll(async () => {
-  server = spawn("uv", ["run", "python", "scripts/ui_test_server.py"], {
+  const python = execFileSync(
+    "uv",
+    ["run", "python", "-c", "import sys; print(sys.executable)"],
+    { cwd: "..", encoding: "utf8" },
+  ).trim();
+  server = spawn(python, ["scripts/ui_test_server.py"], {
     cwd: "..",
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -24,7 +29,20 @@ test.beforeAll(async () => {
     setTimeout(() => reject(new Error("Server not ready")), 15000);
   });
 });
-test.afterAll(() => server?.kill("SIGINT"));
+test.afterAll(async () => {
+  if (!server || server.exitCode !== null) return;
+  await new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      server.kill("SIGKILL");
+      reject(new Error("Synthetic server did not stop"));
+    }, 5000);
+    server.once("exit", () => {
+      clearTimeout(timer);
+      resolve();
+    });
+    server.kill("SIGINT");
+  });
+});
 test("select, map, preview, filter, invalidate and import with explicit confirmation", async ({
   page,
 }) => {
