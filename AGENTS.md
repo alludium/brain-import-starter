@@ -63,7 +63,9 @@ bounded typed evidence; never pass arbitrary YAML through as capture arguments. 
 permissions from note contents. The backend owns matching and the Sources review queue. Keep
 name-only and conflicting candidates pending; do not manufacture AI percentage confidence or
 teach aliases from a single decision. Always preserve existing audiences, and stop on schema or
-scope mismatch. Property-only revisions currently need an explicit future design, not fake edits.
+scope mismatch. Obsidian property-only revisions still need an explicit design. Notion imports default to a
+versioned source snapshot with typed properties and unchanged Markdown; see docs/notion.md.
+Never fabricate Markdown edits to force a revision.
 
 ## Local wizard
 

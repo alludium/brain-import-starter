@@ -9,6 +9,7 @@ from uuid import UUID
 
 import httpx
 
+from brain_import.adapters.notion_snapshot import complete_properties, snapshot
 from brain_import.model import ImportProblem, Record
 from brain_import.properties import evidence
 
@@ -60,7 +61,13 @@ def page_record(
     if page.get("archived") or page.get("in_trash"):
         raise ImportProblem("A selected Notion page is archived; remove it from the selection.")
     text = markdown["markdown"]
-    if not isinstance(text, str) or not text.strip():
+    if not isinstance(text, str):
+        raise ImportProblem("Notion returned invalid Markdown content.")
+    config = config or {}
+    mode = config.get("content_mode", "snapshot")
+    if mode not in {"snapshot", "markdown"}:
+        raise ImportProblem("Notion content_mode must be snapshot or markdown.")
+    if mode == "markdown" and not text.strip():
         raise ImportProblem("A selected Notion page has no Markdown content.")
     if (
         markdown.get("truncated") is not False
@@ -79,7 +86,6 @@ def page_record(
         ),
         "",
     )
-    config = config or {}
     properties = {}
     for key, prop in page.get("properties", {}).items():
         kind = prop.get("type")
@@ -98,7 +104,12 @@ def page_record(
     matching = evidence(properties, text, config)
     matching["heading"] = title[:500] or matching["heading"]
     return Record(
-        "notion", namespace + ":" + page_id, title or page_id, text, page["url"], matching=matching
+        "notion",
+        namespace + ":" + page_id,
+        title or page_id,
+        snapshot(page, text) if mode == "snapshot" else text,
+        page["url"],
+        matching=matching,
     )
 
 
@@ -129,6 +140,7 @@ def records(config: dict, base: Path):
     ) as client:
         for page_id in page_ids:
             page = get_json(client, f"pages/{page_id}")
+            complete_properties(client, page, get_json)
             markdown = get_json(
                 client,
                 f"pages/{page_id}/markdown",

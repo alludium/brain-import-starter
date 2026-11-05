@@ -38,6 +38,9 @@ text, so treat them as private source copies. Planning reads sources but makes *
 The Notion example reads synthetic API responses; the live adapter uses the same conversion.
 Outputs are never overwritten: choose a new filename for a new plan or run.
 
+For research databases, the [Notion sample lab](docs/notion-samples.md) adds 38 fictional company,
+thesis and lead records, with rich bodies and tests for property-only pages, metadata revisions and preserved relationships.
+
 ## Make it yours
 
 Use GitHub's **Use this template** to create your own private repository, or clone this one.

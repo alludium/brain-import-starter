@@ -80,7 +80,7 @@ def test_obsidian_rejects_large_and_non_utf8(tmp_path, content, limit):
         {"unknown_block_ids": [PID]},
         {"warnings": [{"code": "partial"}]},
         {"markdown": '<unknown url="private"/>'},
-        {"markdown": ""},
+        {"markdown": None},
     ],
 )
 def test_notion_rejects_incomplete_pages(notion_page, update):

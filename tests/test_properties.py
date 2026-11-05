@@ -132,7 +132,7 @@ def test_notion_properties_supply_evidence_without_rewriting_markdown():
     row = notion.page_record(
         data["page"], data["markdown"], "test", pid, {"fields": {"website": "Website"}}
     )
-    assert row.text == data["markdown"]["markdown"]
+    assert json.loads(row.text)["markdown"] == data["markdown"]["markdown"]
     assert row.matching["subjects"][0]["domain"] == "acme.ai"
 
 
