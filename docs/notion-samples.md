@@ -36,26 +36,55 @@ allocate real page IDs and rewrite both relations and page mentions; never send 
 live targets. The schema is a testing choice informed by observed layouts, not a verified copy of
 someone else's underlying database schema.
 
-## What the probe proves—and exposes
+## What the probe proves
 
-The probe uses the actual adapter and plan builder, not an alternative mock importer. It checks
-exact original text, private scope and page identity after a title rename. It currently plans **36
-of 38 rows**: 19 companies, 11 leads and 6 theses. The two property-only records are explicitly
-excluded from the compatible TOMLs and separately tested for rejection. This exclusion is not a
-recommended real-world workaround.
+The probe uses the actual adapter and plan builder. It now plans **all 38 records**, including the
+two property-only pages. It verifies original Markdown within each snapshot, typed property values,
+relations, private scope, stable source identity across a rename, and detection of score/status and
+relation-only edits. Directly mapping a relation as a company name still refuses unsafe guessing.
 
-Current gaps are deliberately visible in its output:
+Offline fixtures do not establish live provider authentication or Brain persistence. The separate
+`live_probe.py` verifies captured host-MCP fetches against the independently maintained synthetic
+catalog, including two live property edits. It labels missing REST property IDs and keeps the
+transport explicit. Local captures and live IDs stay in ignored `.local/`, never in Git.
 
-- An empty page body is refused even when useful properties exist (C011 and L012).
-- A score/status-only edit produces an identical imported record: the values are lost.
-- A thesis-membership-only edit also produces an identical record.
-- Mapping a company relation directly as company identity is refused.
+`acceptance.py` additionally exercises the installed CLI and a fresh isolated Brain stack, verifies
+stored text, provenance and private audience, proves preview makes no writes, checks unchanged
+repeat imports do not grow tables, and checks metadata-only edits create linked revisions. Run it
+with the Brain eval environment and both checkout roots on PYTHONPATH; `--apply-local` is required.
+It generates unique local database/bucket names and cleans those resources on completion. This is
+an operator acceptance script, not a customer installation dependency. See the dated results below.
 
-This is page-import coverage, **not** authenticated Notion, Brain matching or origination-list
-acceptance. Tests pin these observations so a future structured adapter must replace them with
-positive preservation assertions. They do not certify all Notion cases. Pagination, revoked access,
-API limits, interrupted runs, formula/rollup results, schema renames and real permission behavior
-still need provider-level tests. The lab is intentionally small; it is not a load test.
+This small lab is not exhaustive or a load test. Complex formula/rollup results, source ACL changes,
+live REST authentication and end-to-end origination-list creation remain separate acceptance work.
+
+## Observed acceptance — 5 November 2026
+
+A private personal Notion workspace was populated with all 38 fictional records across three
+databases. Queries returned 20 companies, 6 theses and 12 leads with no remaining result pages.
+Read-back checked every expected property and relationship against the synthetic catalog. Rich
+bodies, native page mentions and both empty-body records were included. A score/status edit and
+a thesis-relation edit were made, fetched, tested and restored in Notion.
+
+Those captured live MCP responses then ran through the actual importer and installed Brain CLI
+against a fresh local Brain backend. Independent database reads confirmed:
+
+- All 38 source documents stored exactly, with original URLs/external IDs and private audiences.
+- Preview changed no source, association, association-event, link or entity counts.
+- An unchanged repeat reused all 38 source IDs without increasing those table counts.
+- The two property-only edits created revisions linked to their respective original sources.
+- The isolated database and bucket were removed after the successful run.
+
+The importer suite passed 89 tests; lint, formatting and distribution builds passed. An initial
+local backend startup failed in an Intel Python cryptography library on Apple Silicon; the
+successful acceptance used an isolated native Python 3.12 environment and locked Brain dependencies.
+No security code was bypassed or changed. Python 3.14 also exposed an unrelated Brain annotation
+compatibility error; use the tested Python 3.12 runtime for this operator check.
+
+This proves live host-MCP retrieval and local Brain persistence. It does not prove standalone
+Notion REST authentication, hosted Brain acceptance, or automatic entity/list-membership creation.
+Live page IDs, source exports and detailed receipts remain outside Git in the operator's ignored
+local evidence directory. No real customer rows were used.
 
 ## Expected identity behavior
 
@@ -75,9 +104,9 @@ These are review expectations for a later matching run, not assertions of observ
 | C018 | Source-reported outreach remains a claim; no message is sent |
 | C020 | Quoted instructions remain inert source text |
 
-The next implementation step is to preserve raw typed properties and page bodies separately,
-including property-only revisions, then map explicit selections and relationships into reviewed
-Brain identities and list memberships. Keep source scores separate from identity confidence.
+Typed properties and page bodies are now preserved separately within the source snapshot. The next
+product step is mapping explicit selections and relationships into reviewed Brain identities and
+list memberships. Keep source scores separate from identity confidence.
 Do not fabricate body edits to force metadata updates, execute source buttons, auto-promote Deals,
 or infer sharing from the source. See [Notion setup](notion.md) and
 [matching and sharing](matching-and-sharing.md).

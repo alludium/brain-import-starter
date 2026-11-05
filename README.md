@@ -39,7 +39,7 @@ The Notion example reads synthetic API responses; the live adapter uses the same
 Outputs are never overwritten: choose a new filename for a new plan or run.
 
 For research databases, the [Notion sample lab](docs/notion-samples.md) adds 38 fictional company,
-thesis and lead records, with rich bodies and explicit tests of the current structured-data gaps.
+thesis and lead records, with rich bodies and tests for property-only pages, metadata revisions and preserved relationships.
 
 ## Make it yours
 

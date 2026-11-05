@@ -96,7 +96,7 @@ def generate(root):
             writer = csv.DictWriter(f, fieldnames=list(rows[0]["properties"]))
             writer.writeheader()
             writer.writerows(r["properties"] for r in rows)
-        ids = [uid(r["key"]) for r in rows if r["content"]]
+        ids = [uid(r["key"]) for r in rows]
         fields = (
             {"company": "Company", "website": "Website"}
             if database == "companies"
@@ -129,7 +129,7 @@ non-working .test placeholders. Fake local Notion IDs are deterministic and do n
 
 - C001/C002: exact company identifiers; C003: conflicting company name and website.
 - C005/C006: shared alias; C007/C008: parent/subsidiary shared domain.
-- C011/L012: empty body with useful properties; deliberately excluded from compatible TOMLs.
+- C011/L012: empty body with useful properties; included in snapshot imports.
 - C015/C016: unknown versus zero score. C017/L001: memberships in multiple theses.
 - L003/L004: two people with the same name. L007: person without a company.
 - L009/L010: company leads referencing pipeline companies; do not create duplicates.
@@ -139,7 +139,8 @@ non-working .test placeholders. Fake local Notion IDs are deterministic and do n
 The generated CSVs are for inspection. They do not carry page bodies or relations. catalog.json
 contains properties, relations and original content; pages.json is an offline API-shaped fixture.
 The three TOMLs exercise the current page adapter only, with an inert Brain target. They do not
-populate origination lists or establish live Notion authentication. Run probe.py for current gaps.
+populate origination lists or establish live Notion authentication.
+Run the probe for preservation checks.
 
 ## Preserving meaning
 
@@ -148,7 +149,7 @@ Domain on a thesis describes a research area, not a company website. Unknown is 
 Do not execute outreach controls, promote Deals, auto-create companies for people, or infer sharing.
 Relations and page links are separate cases. A selected view is not a permission boundary.
 
-## Mutation checks for a later live importer
+## Mutation checks
 
 1. Change only C001 Deal Fit and Status; expect a new property snapshot with unchanged body.
 2. Rename C002; retain the same source ID. Rename a property; use its stable property ID.
@@ -157,7 +158,7 @@ Relations and page links are separate cases. A selected view is not a permission
 5. Simulate an inaccessible relation, paging interruption and retry; report incomplete input.
 6. Repeat unchanged input; create no duplicate sources, people, companies or list entries.
 
-These are acceptance expectations, not claims that the current importer supports these operations.
+Snapshots preserve properties and relations; list creation and view discovery remain separate.
 The original screenshot set contains UI buttons and unknown underlying schema. This lab models
 the observed data shapes; it does not reproduce hidden formulas, workflows or Jay's exact schema.
 """

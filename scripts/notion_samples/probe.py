@@ -20,7 +20,13 @@ def probe(root):
         report["plans"][database] = len(plan["records"])
         for record in plan["records"]:
             pid = record["external_id"].split(":")[-1]
-            assert record["text"] == fixture[pid]["markdown"]["markdown"]
+            saved = json.loads(record["text"])
+            assert saved["markdown"] == fixture[pid]["markdown"]["markdown"]
+            for name, prop in fixture[pid]["page"]["properties"].items():
+                value = prop[prop["type"]]
+                if prop["type"] == "relation":
+                    value = sorted(value, key=lambda v: v["id"])
+                assert saved["properties"][name]["value"] == value
             assert record["scope"] == "private" and record["preserve_audience"]
     report["original_text_and_private_scope_preserved"] = True
 
@@ -34,12 +40,10 @@ def probe(root):
             {"fields": fields or {}},
         )
 
-    report["refused_rows"] = {}
+    report["property_only_rows"] = []
     for key in ("C011", "L012"):
-        try:
-            convert(key)
-        except ImportProblem as exc:
-            report["refused_rows"][key] = str(exc)
+        assert json.loads(convert(key).text)["markdown"] == ""
+        report["property_only_rows"].append(key)
 
     original = fixture[uid("C001")]
     changed = copy.deepcopy(original)

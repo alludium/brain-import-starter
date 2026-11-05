@@ -49,7 +49,7 @@ def test_graph_and_research_shapes(notion_lab):
     assert "What would change our mind" in thesis
 
 
-def test_actual_importer_probe_exposes_current_gaps(notion_lab):
+def test_actual_importer_preserves_structured_research(notion_lab):
     root, _ = notion_lab
     result = subprocess.run(
         [sys.executable, "-m", "scripts.notion_samples.probe", str(root)],
@@ -59,11 +59,11 @@ def test_actual_importer_probe_exposes_current_gaps(notion_lab):
         text=True,
     )
     report = json.loads(result.stdout)
-    assert report["plans"] == {"companies": 19, "theses": 6, "leads": 11}
+    assert report["plans"] == {"companies": 20, "theses": 6, "leads": 12}
     assert report["original_text_and_private_scope_preserved"]
-    assert set(report["refused_rows"]) == {"C011", "L012"}
-    assert not report["property_only_change_visible"]
-    assert not report["relation_change_visible"]
+    assert set(report["property_only_rows"]) == {"C011", "L012"}
+    assert report["property_only_change_visible"]
+    assert report["relation_change_visible"]
     assert "must be text" in report["mapped_company_relation"]
     assert report["page_rename_keeps_source_id"]
 
