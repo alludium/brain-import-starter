@@ -10,6 +10,7 @@ from uuid import UUID
 import httpx
 
 from brain_import.model import ImportProblem, Record
+from brain_import.properties import evidence
 
 API_VERSION = "2026-03-11"
 RETRYABLE = {429, 500, 502, 503, 504, 529}
@@ -51,7 +52,9 @@ def get_json(client, path: str, *, params=None, sleep=time.sleep):
     raise ImportProblem("Notion retry limit reached.")
 
 
-def page_record(page: dict, markdown: dict, namespace: str, page_id: str) -> Record:
+def page_record(
+    page: dict, markdown: dict, namespace: str, page_id: str, config: dict | None = None
+) -> Record:
     if str(UUID(page["id"])) != page_id or str(UUID(markdown["id"])) != page_id:
         raise ImportProblem("Notion returned a different page ID.")
     if page.get("archived") or page.get("in_trash"):
@@ -76,7 +79,27 @@ def page_record(page: dict, markdown: dict, namespace: str, page_id: str) -> Rec
         ),
         "",
     )
-    return Record("notion", namespace + ":" + page_id, title or page_id, text, page["url"])
+    config = config or {}
+    properties = {}
+    for key, prop in page.get("properties", {}).items():
+        kind = prop.get("type")
+        if kind in ("title", "rich_text"):
+            properties[key] = "".join(t.get("plain_text", "") for t in prop.get(kind, []))
+        elif kind in ("url", "email"):
+            properties[key] = prop.get(kind) or ""
+        elif kind == "multi_select":
+            properties[key] = [v["name"] for v in prop.get(kind, [])]
+        elif kind == "select":
+            properties[key] = (prop.get(kind) or {}).get("name", "")
+        elif key in config.get("fields", {}).values():
+            raise ImportProblem(
+                "Mapped Notion identity properties must be text, URL, email or select values."
+            )
+    matching = evidence(properties, text, config)
+    matching["heading"] = title[:500] or matching["heading"]
+    return Record(
+        "notion", namespace + ":" + page_id, title or page_id, text, page["url"], matching=matching
+    )
 
 
 def records(config: dict, base: Path):
@@ -90,7 +113,7 @@ def records(config: dict, base: Path):
         data = json.loads((base / fixture).read_text(encoding="utf-8"))
         for page_id in page_ids:
             item = data[page_id]
-            yield page_record(item["page"], item["markdown"], namespace, page_id)
+            yield page_record(item["page"], item["markdown"], namespace, page_id, config)
         return
     token = os.environ.get(config.get("token_env", "NOTION_TOKEN"))
     if not token:
@@ -114,4 +137,4 @@ def records(config: dict, base: Path):
                     "include_transcript": "false",
                 },
             )
-            yield page_record(page, markdown, namespace, page_id)
+            yield page_record(page, markdown, namespace, page_id, config)

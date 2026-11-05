@@ -73,3 +73,17 @@ Live Notion remains untested. The assistant's Notion connection was available, b
 importer had no `NOTION_TOKEN`; it needs its own read-content API connection and selected page IDs.
 No personal notes or live Notion page bodies were imported. Manual vault discovery and target-ID
 configuration remain setup friction; improve them based on this small working flow.
+
+## Structured matching acceptance — 4 November 2026
+
+The follow-up uses the new structured adapter and matching-review backend in isolated local
+services. Eleven notes from the dedicated synthetic Obsidian vault were captured through MCP.
+All eleven stored the original text exactly and reused the same source on an unchanged repeat.
+Their mapped evidence produced eight automatic associations and five pending reviews. The
+website-only case matched; conflicting company/domain evidence remained pending; a competitor
+mentioned only in the body did not acquire a subject link.
+
+This verifies the structured import path, not a universal repair of legacy name linking. The
+backend change is [vc-brain #524](https://github.com/alludium/vc-brain/pull/524); it must deploy
+before these plans can be applied to the hosted Brain. The previous six-note hosted trial remains
+separate evidence. Live Notion access is still untested. No real vault content was imported.

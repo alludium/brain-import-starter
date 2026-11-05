@@ -1,3 +1,7 @@
+---
+brain_id: first-conversation
+company: "[[Companies/Northwind Robotics]]"
+---
 # First conversation
 
 Synthetic notes, 3 November 2026.

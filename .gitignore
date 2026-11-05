@@ -12,3 +12,8 @@ config.local.toml
 *.plan.json
 *.receipts.jsonl
 .DS_Store
+
+ui/node_modules/
+ui/test-results/
+ui/playwright-report/
+src/brain_import/web/

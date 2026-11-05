@@ -6,6 +6,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from brain_import.model import ImportProblem, Record
+from brain_import.properties import evidence, frontmatter, label
 
 
 def records(config: dict, base: Path):
@@ -16,6 +17,7 @@ def records(config: dict, base: Path):
     includes = config.get("include", ["*.md", "*.markdown"])
     excludes = config.get("exclude", ["Templates/*", "Archive/*"])
     max_bytes = config.get("max_text_bytes", 500_000)
+    identities = {}
     for directory, dirs, names in os.walk(vault, followlinks=False):
         dirs[:] = sorted(
             d for d in dirs if not d.startswith(".") and not (Path(directory) / d).is_symlink()
@@ -31,23 +33,76 @@ def records(config: dict, base: Path):
                 continue
             if any(fnmatchcase(relative, p) for p in excludes):
                 continue
-            # Limit the read itself, including if a file grows between stat and read.
-            with path.open("rb") as stream:
-                data = stream.read(max_bytes + 1)
-            if len(data) > max_bytes:
-                raise ImportProblem("A Markdown file exceeds max_text_bytes; narrow the selection.")
             try:
-                text = data.decode("utf-8")
-            except UnicodeDecodeError as exc:
-                raise ImportProblem(
-                    "A Markdown file is not UTF-8; convert it locally first."
-                ) from exc
-            if not text.strip():
-                continue
-            url = (
-                "obsidian://open?vault="
-                + quote(config.get("vault_name", vault.name), safe="")
-                + "&file="
-                + quote(relative, safe="")
-            )
-            yield Record("obsidian", namespace + ":" + relative, path.stem, text, url)
+                # Limit the read itself, including if a file grows between stat and read.
+                with path.open("rb") as stream:
+                    data = stream.read(max_bytes + 1)
+                if len(data) > max_bytes:
+                    raise ImportProblem(
+                        "A Markdown file exceeds max_text_bytes; narrow the selection."
+                    )
+                try:
+                    text = data.decode("utf-8")
+                except UnicodeDecodeError as exc:
+                    raise ImportProblem(
+                        "A Markdown file is not UTF-8; convert it locally first."
+                    ) from exc
+                if not text.strip():
+                    continue
+                url = (
+                    "obsidian://open?vault="
+                    + quote(config.get("vault_name", vault.name), safe="")
+                    + "&file="
+                    + quote(relative, safe="")
+                )
+                properties, body = frontmatter(text)
+                identity = relative
+                if key := config.get("identity_property"):
+                    identity = label(properties.get(key, ""))
+                    if not identity:
+                        raise ImportProblem(
+                            "A selected note has no configured stable identity property."
+                        )
+                    identity = "id:" + identity
+                    if identity in identities:
+                        raise ImportProblem(
+                            "Duplicate source ID also used by "
+                            + identities[identity]
+                            + "; give each selected note a unique stable ID."
+                        )
+                    identities[identity] = relative
+                rules = config.get("folder_rules", [])
+                selected = [r for r in rules if relative.startswith(r["folder"].rstrip("/") + "/")]
+                rule = max(selected, key=lambda r: len(r["folder"]), default={})
+                mapped = {
+                    **config,
+                    "fields": {**config.get("fields", {}), **rule.get("fields", {})},
+                }
+                matching = evidence(properties, body, mapped)
+                profile = rule.get("profile", "notes")
+                if profile not in {"notes", "organization", "person"}:
+                    raise ImportProblem("Folder profile must be notes, organization or person.")
+                if profile != "notes" and not any(
+                    s["type"] == profile for s in matching["subjects"]
+                ):
+                    matching["subjects"].append(
+                        {
+                            "type": profile,
+                            "name": matching["heading"] or path.stem[:300],
+                            "location": "folder." + rule["folder"],
+                            "role": "subject",
+                        }
+                    )
+                matching["heading"] = matching["heading"] or path.stem[:500]
+                yield Record(
+                    "obsidian",
+                    namespace + ":" + identity,
+                    path.stem,
+                    text,
+                    url,
+                    matching=matching,
+                )
+            except ImportProblem as exc:
+                raise ImportProblem(f"{relative}: {exc}") from exc
+            except OSError as exc:
+                raise ImportProblem(f"{relative}: Cannot read this selected note.") from exc

@@ -12,6 +12,13 @@ Brain's normal processing, permissions and usage charges still apply.
 This is deliberately a few ordinary Python modules. No connector framework, background service,
 or separate Brain authentication to maintain.
 
+## Import Obsidian through a local UI
+
+Build once with `npm ci --prefix ui && npm run build --prefix ui`, then run
+`uv run brain-import ui`. Choose your vault and folders, map properties, set sharing and run a
+no-write matching preview before confirming the import. See the [wizard guide](docs/local-ui.md).
+The backend must advertise `capture.dry_run`; older servers are blocked before sending notes.
+
 ## Try it in two minutes
 
 Requires [uv](https://docs.astral.sh/uv/getting-started/installation/) and Python 3.12+.
@@ -27,7 +34,7 @@ uv run brain-import inspect .local/obsidian.plan.json
 ```
 
 The output lists selected records, their scope and hashes. The `.local/` plans contain the original
-text, so treat them as private source copies. Planning reads sources but makes **no Brain calls**.
+text, so treat them as private source copies. Planning reads sources but makes **no Brain calls**. The separate `preview` command and UI dry run contact Brain without importing.
 The Notion example reads synthetic API responses; the live adapter uses the same conversion.
 Outputs are never overwritten: choose a new filename for a new plan or run.
 
@@ -62,7 +69,8 @@ Open the folder in Claude Code or Codex and start with:
 
 The digest binds approval to the exact saved plan, including the target and sharing scope.
 Changing a source after planning doesn't change what gets sent. `apply` checks your signed-in
-Brain account against the plan and stops on the first failure or server warning. It never logs
+Brain account against the plan and stops on the first failure or server warning. With a CLI
+supporting `call --jsonl`, it reuses one connection while checking each record before sending the next. It never logs
 raw tool responses. Receipts identify stored sources, versions, scope and any background job.
 If a receipt includes `structure_job_id`, check it with `brain jobs <id>` before calling processing
 complete. Inspect imported sources in Brain before expanding the selection.
@@ -93,13 +101,14 @@ same source, change accounts mid-run, or replay old plans after newer versions h
 
 | Source | Included | Deliberate boundary |
 | --- | --- | --- |
-| Obsidian | Selected UTF-8 Markdown, original frontmatter and wikilinks, vault-relative IDs, open-in-Obsidian links | No attachment bytes, Canvas, plugin data, graph reconstruction or inferred entities |
+| Obsidian | Selected UTF-8 Markdown, original frontmatter and wikilinks, vault-relative IDs, open-in-Obsidian links | Typed property evidence and heading review; no attachment bytes, Canvas or graph reconstruction |
 | Notion | Explicit page IDs, original API Markdown, title, stable IDs and Notion URLs | No workspace crawl, database property export, child-page traversal, comments, attachment download or meeting transcripts |
 
-Imports default to **private**. `scope = "firm"` is explicit, and source permissions are not
+Imports default to **private**; firm, selected people and existing groups are explicit choices.
+See [matching and sharing](docs/matching-and-sharing.md). Source permissions are not
 mirrored. Existing versions retain their earlier audience: changing config is not a sharing
 operation. A returned scope mismatch stops the run for review. Deleted source files stay in
-Brain; renaming an Obsidian file changes its identity. See [source behavior](docs/architecture.md).
+Brain; renaming an Obsidian file changes its identity unless configured with a stable property. See [source behavior](docs/architecture.md).
 
 ## Extend it
 
@@ -125,7 +134,16 @@ uv build
 ```
 
 GitHub Actions tests Python 3.12 and 3.14, runs both offline examples, and builds and smoke-tests
-the wheel. No credentials or real source data are used in CI. Live Notion reads and authenticated
+the wheel. No credentials or real source data are used in CI. For broader synthetic Obsidian testing,
+see the [78-case, 1,000-note and failure suites](docs/sample-acceptance.md). Live Notion reads and authenticated
 Brain imports need your own scoped acceptance run; automated tests are not evidence of those.
 
 [MIT licensed](LICENSE). Start small, then make it fit how your firm works.
+
+Structured imports require the matching-review backend release. Check the tool fields described
+in [matching and sharing](docs/matching-and-sharing.md) before live apply. Offline examples do not
+require a Brain connection.
+
+The wizard can resolve uncertain subjects before import: choose a candidate, search another
+existing company/person, leave unlinked, or defer to Sources. Choices are saved locally and checked
+again when importing. See [the review flow](docs/local-ui.md).
