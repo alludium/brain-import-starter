@@ -133,7 +133,8 @@ uv build
 ```
 
 GitHub Actions tests Python 3.12 and 3.14, runs both offline examples, and builds and smoke-tests
-the wheel. No credentials or real source data are used in CI. Live Notion reads and authenticated
+the wheel. No credentials or real source data are used in CI. For broader synthetic Obsidian testing,
+see the [78-case, 1,000-note and failure suites](docs/sample-acceptance.md). Live Notion reads and authenticated
 Brain imports need your own scoped acceptance run; automated tests are not evidence of those.
 
 [MIT licensed](LICENSE). Start small, then make it fit how your firm works.

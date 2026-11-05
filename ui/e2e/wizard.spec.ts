@@ -57,8 +57,18 @@ test("select, map, preview, filter, invalidate and import with explicit confirma
   ).toBeVisible();
   await page.getByLabel("Vault folder", { exact: true }).fill(info.vault);
   await page.getByRole("button", { name: "Load folders" }).click();
-  await page.getByRole("checkbox", { name: /Notes\s*3 files/ }).check();
-  await page.getByLabel("Note type for Notes").selectOption("organization");
+  await page.getByRole("checkbox", { name: /Notes\s*2 files/ }).check();
+  await page
+    .getByLabel("Note type for Notes", { exact: true })
+    .selectOption("organization");
+  const nested = page.getByRole("checkbox", {
+    name: /Notes\/Nested\s*1 files/,
+  });
+  await expect(nested).toBeChecked();
+  await expect(nested).toBeDisabled();
+  await expect(
+    page.getByLabel("Note type for Notes/Nested", { exact: true }),
+  ).toHaveValue("organization");
   await page
     .getByText("Selection and stable identity", { exact: true })
     .click();
@@ -98,10 +108,59 @@ test("select, map, preview, filter, invalidate and import with explicit confirma
   await expect(page.locator(".note")).toHaveCount(3);
   await page.reload();
   await expect(
-    page.getByRole("checkbox", { name: /Notes\s*3 files/ }),
+    page.getByRole("checkbox", { name: /Notes\s*2 files/ }),
   ).toBeChecked();
-  await expect(page.getByLabel("Note type for Notes")).toHaveValue(
-    "organization",
+  await expect(
+    page.getByLabel("Note type for Notes", { exact: true }),
+  ).toHaveValue("organization");
+  // Configured folder overrides must survive a browser reload and another dry run.
+  const headers = { "X-Import-Key": new URL(info.url).hash.slice(5) };
+  const saved = await (
+    await page.request.get(new URL("/api/state", info.url).href, { headers })
+  ).json();
+  saved.settings.source.folder_rules = [
+    {
+      folder: "Notes",
+      profile: "organization",
+      fields: { company: "company" },
+    },
+    {
+      folder: "Notes/Nested",
+      profile: "person",
+      fields: { person: "Contact" },
+    },
+  ];
+  await page.request.post(new URL("/api/preview", info.url).href, {
+    headers,
+    data: saved.settings,
+  });
+  await expect
+    .poll(
+      async () =>
+        (
+          await (
+            await page.request.get(new URL("/api/state", info.url).href, {
+              headers,
+            })
+          ).json()
+        ).phase,
+    )
+    .toBe("ready");
+  await page.reload();
+  await expect(
+    page.getByText("Folder-specific mappings from your configuration", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Run dry run", exact: true }).click();
+  await expect(
+    page.getByRole("checkbox", { name: /I have reviewed/ }),
+  ).toBeEnabled();
+  const restored = await (
+    await page.request.get(new URL("/api/state", info.url).href, { headers })
+  ).json();
+  expect(restored.settings.source.folder_rules).toEqual(
+    saved.settings.source.folder_rules,
   );
   await page.getByRole("button", { name: "Needs review", exact: true }).click();
   await expect(page.locator(".note")).toHaveCount(1);

@@ -134,3 +134,45 @@ def test_notion_properties_supply_evidence_without_rewriting_markdown():
     )
     assert row.text == data["markdown"]["markdown"]
     assert row.matching["subjects"][0]["domain"] == "acme.ai"
+
+
+def test_bom_properties_preserve_original_and_report_bad_note_path(tmp_path):
+    text = "\ufeff---\nbrain_id: bom-1\ncompany: Acme AI\nwebsite: acme.test\n---\n# Note\nText"
+    (tmp_path / "bom.md").write_bytes(text.encode())
+    config = {"vault": str(tmp_path), "namespace": "bom", "identity_property": "brain_id"}
+    row = list(obsidian.records(config, tmp_path))[0]
+    assert row.external_id == "bom:id:bom-1"
+    assert row.text == text and row.matching["subjects"][0]["domain"] == "acme.test"
+    (tmp_path / "broken.md").write_text("---\ncompany: [broken\n---\nPrivate payload")
+    with pytest.raises(ImportProblem, match="broken.md: Invalid YAML") as error:
+        list(obsidian.records(config, tmp_path))
+    assert "Private payload" not in str(error.value)
+
+
+@pytest.mark.parametrize(
+    ("body", "wanted"),
+    [
+        ("```markdown\n# Acme AI\n```\nNotes", ""),
+        ("~~~\n# Acme AI\n~~~\n   # Kestrel Data ###", "Kestrel Data"),
+        ("````\n```\n# Acme AI\n````\n# Kestrel Data", "Kestrel Data"),
+        ("<!--\n# Acme AI\n-->\n# Kestrel Data", "Kestrel Data"),
+        ("    # Acme AI\n# Kestrel Data", "Kestrel Data"),
+        ("#hashtag\n# Kestrel Data", "Kestrel Data"),
+    ],
+)
+def test_heading_ignores_quoted_code_and_honours_markdown_indentation(body, wanted):
+    assert evidence({}, body, {})["heading"] == wanted
+
+
+def test_duplicate_stable_identity_names_both_files_without_echoing_id(tmp_path):
+    for name in ("one.md", "two.md"):
+        (tmp_path / name).write_text("---\nbrain_id: private-value\n---\nSynthetic note")
+    with pytest.raises(ImportProblem) as error:
+        list(
+            obsidian.records(
+                {"vault": str(tmp_path), "namespace": "test", "identity_property": "brain_id"},
+                tmp_path,
+            )
+        )
+    assert "one.md" in str(error.value) and "two.md" in str(error.value)
+    assert "private-value" not in str(error.value)

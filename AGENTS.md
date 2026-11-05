@@ -75,3 +75,8 @@ post-import write. Search candidates through audience-filtered `matching_search`
 firm search that can reveal identities to a wider audience. A dry run must never fall back to capture on an older server. Never bypass
 Host/Origin/session-key checks or allow a browser to provide arbitrary tool names, target accounts,
 shell commands or saved-plan paths. CI builds the UI into the wheel. See docs/local-ui.md.
+
+For synthetic Obsidian acceptance, see docs/sample-acceptance.md and scripts/sample_data/.
+Keep independently authored expected matches separate from actual results. Generate vaults outside
+the repository, run live acceptance only against an explicitly authorized isolated local Brain,
+and retain exact-text, audience, no-write-preview and unchanged-repeat assertions.

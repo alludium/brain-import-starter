@@ -293,3 +293,14 @@ def test_review_capability_is_required_before_capture(monkeypatch):
     )
     with pytest.raises(ImportProblem, match="Nothing was imported"):
         Brain({}).require_preview(with_review=True)
+
+
+def test_inventory_includes_parents_without_direct_notes(tmp_path):
+    (tmp_path / "Companies/Nested").mkdir(parents=True)
+    (tmp_path / "Companies/Nested/a.md").write_text("Synthetic note")
+    result = inventory(str(tmp_path))
+    assert result["count"] == 1
+    assert result["folders"] == [
+        {"path": "Companies", "count": 0},
+        {"path": "Companies/Nested", "count": 1},
+    ]

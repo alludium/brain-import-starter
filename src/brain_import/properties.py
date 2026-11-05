@@ -5,6 +5,7 @@ from urllib.parse import urlsplit
 
 import yaml
 
+from brain_import.markdown import heading
 from brain_import.model import ImportProblem
 
 DEFAULT_FIELDS = {
@@ -36,7 +37,7 @@ UniqueLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, uni
 
 
 def frontmatter(text):
-    match = re.match(r"\A---\r?\n(.*?)\r?\n---(?:\r?\n|$)", text, re.S)
+    match = re.match(r"\A\ufeff?---\r?\n(.*?)\r?\n---(?:\r?\n|$)", text, re.S)
     if not match:
         return {}, text
     raw = match[1]
@@ -123,7 +124,6 @@ def evidence(properties, body, config):
             for name in values(key)
             if name
         )
-    heading = re.search(r"^#\s+(.+)$", body, re.M)
     if len(subjects) > 30:
         raise ImportProblem("More than 30 identity subjects; narrow this note's mapped properties.")
-    return {"subjects": subjects, "heading": heading[1].strip()[:500] if heading else ""}
+    return {"subjects": subjects, "heading": heading(body)}

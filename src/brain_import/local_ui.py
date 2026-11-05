@@ -68,7 +68,12 @@ def inventory(raw):
                 raise ImportProblem(
                     "More than 10,000 Markdown files; select a smaller vault folder."
                 )
-            folders[path.parent.relative_to(root).as_posix()] += 1
+            relative = path.parent.relative_to(root)
+            folders[relative.as_posix()] += 1
+            # A selectable parent can contain only subfolders, with no direct notes.
+            for parent in relative.parents:
+                if parent.as_posix() != ".":
+                    folders.setdefault(parent.as_posix(), 0)
     return {
         "path": str(root),
         "name": root.name,

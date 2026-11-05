@@ -42,6 +42,9 @@ function App() {
   }>();
   const [selected, setSelected] = useState<string[]>([]);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
+  const [folderFields, setFolderFields] = useState<
+    Record<string, Record<string, string>>
+  >({});
   const [namespace, setNamespace] = useState("");
   const [exclude, setExclude] = useState("Templates/*\nArchive/*");
   const [fields, setFields] = useState(defaults);
@@ -82,9 +85,19 @@ function App() {
                 setScope(saved.scope);
                 setRecipients(saved.people?.join(", ") || saved.group || "");
                 setLimit(saved.max_records);
+                setFolderFields(
+                  Object.fromEntries(
+                    (saved.source.folder_rules || [])
+                      .filter((r) => r.fields && Object.keys(r.fields).length)
+                      .map((r) => [r.folder, r.fields!]),
+                  ),
+                );
                 setProfiles(
                   Object.fromEntries(
-                    saved.source.folder_rules.map((r) => [r.folder, r.profile]),
+                    (saved.source.folder_rules || []).map((r) => [
+                      r.folder,
+                      r.profile,
+                    ]),
                   ),
                 );
                 setSelected([
@@ -140,6 +153,7 @@ function App() {
       setInventory(result);
       setSelected([]);
       setProfiles({});
+      setFolderFields({});
       setNamespace(
         result.name
           .toLowerCase()
@@ -182,9 +196,21 @@ function App() {
       ],
       fields,
       ...(identity ? { identity_property: identity } : {}),
-      folder_rules: Object.entries(profiles)
-        .filter(([folder]) => selected.includes(folder) && folder !== ".")
-        .map(([folder, profile]) => ({ folder, profile })),
+      folder_rules: [
+        ...new Set([...Object.keys(profiles), ...Object.keys(folderFields)]),
+      ]
+        .filter(
+          (folder) =>
+            folder !== "." &&
+            selected.some(
+              (s) => s !== "." && (folder === s || folder.startsWith(s + "/")),
+            ),
+        )
+        .map((folder) => ({
+          folder,
+          profile: profiles[folder] || "notes",
+          ...(folderFields[folder] ? { fields: folderFields[folder] } : {}),
+        })),
     };
     setDirty(false);
     setConfirm(false);
@@ -204,6 +230,13 @@ function App() {
           : {}),
     });
   }
+  const parentSelection = (folder: string) =>
+    selected.find((s) => s !== "." && folder.startsWith(s + "/"));
+  const inheritedProfile = (folder: string) =>
+    Object.keys(profiles)
+      .filter((p) => folder.startsWith(p + "/"))
+      .sort((a, b) => b.length - a.length)
+      .map((p) => profiles[p])[0] || "notes";
   const results = state.preview || [];
   return (
     <>
@@ -365,7 +398,11 @@ function App() {
                           <label className="check">
                             <input
                               type="checkbox"
-                              checked={selected.includes(f.path)}
+                              checked={
+                                selected.includes(f.path) ||
+                                !!parentSelection(f.path)
+                              }
+                              disabled={!!parentSelection(f.path)}
                               onChange={(e) => {
                                 setSelected(
                                   e.target.checked
@@ -378,13 +415,23 @@ function App() {
                             <span>
                               {f.path === "." ? "Notes at vault root" : f.path}
                               <small>{f.count} files directly in folder</small>
+                              {parentSelection(f.path) && (
+                                <small>
+                                  Included by {parentSelection(f.path)}
+                                </small>
+                              )}
                             </span>
                           </label>
                           {f.path !== "." && (
                             <select
                               aria-label={"Note type for " + f.path}
-                              disabled={!selected.includes(f.path)}
-                              value={profiles[f.path] || "notes"}
+                              disabled={
+                                !selected.includes(f.path) &&
+                                !parentSelection(f.path)
+                              }
+                              value={
+                                profiles[f.path] || inheritedProfile(f.path)
+                              }
                               onChange={(e) => {
                                 setProfiles({
                                   ...profiles,
@@ -560,6 +607,41 @@ function App() {
                     review.
                   </p>
                 </div>
+                {!!Object.keys(folderFields).length && (
+                  <div className="mapping-example">
+                    <strong>
+                      Folder-specific mappings from your configuration
+                    </strong>
+                    <p>
+                      These override the fields below for their folders and are
+                      kept on repeat dry runs. Edit the saved configuration to
+                      change them, or use the global mappings below for every
+                      folder.
+                    </p>
+                    <ul>
+                      {Object.entries(folderFields).map(([folder, mapping]) => (
+                        <li key={folder}>
+                          <strong>{folder}</strong>:{" "}
+                          {Object.entries(mapping)
+                            .map(
+                              ([field, property]) =>
+                                `${labels[field] || field} → ${property || "disabled"}`,
+                            )
+                            .join("; ")}
+                        </li>
+                      ))}
+                    </ul>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFolderFields({});
+                        changed();
+                      }}
+                    >
+                      Use global mappings for every folder
+                    </button>
+                  </div>
+                )}
                 <h3>Which Obsidian property contains each value?</h3>
                 <div className="two">
                   {Object.entries(fields).map(([k, v]) => (

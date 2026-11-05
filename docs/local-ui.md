@@ -55,6 +55,8 @@ analytics, external fonts, a hosted upload service, or the assistant's conversat
 Changing any setting invalidates the UI confirmation. Source edits after preview do not change
 the saved snapshot; run another dry run to include them. Keep the collection ID stable across
 repeat imports; when moving from CLI configuration, reuse its exact namespace. Use a stable ID property before the first import if notes will be renamed.
+Loaded folder-specific mappings are shown explicitly and preserved on repeat dry runs. Choose
+**Use global mappings for every folder** to clear those overrides deliberately.
 For mixed property schemas, use separate selections or configure `source.folder_rules[].fields`
 in code. Inline `Field:: value` properties are not parsed.
 
@@ -125,3 +127,7 @@ a stand-in transport; actual backend acceptance is reported separately.
 For an isolated development backend, `--server http://127.0.0.1:PORT/mcp` is supported. Use `--viewer-url http://127.0.0.1:WEBPORT` when the local Brain viewer runs separately. A local
 dev token supplied in `BRAIN_ACCESS_TOKEN` may have no OAuth workspace context; the importer
 still checks exact firm/user IDs. Hosted connections always require their workspace context.
+
+Parent folders containing only subfolders are selectable. A descendant included by a selected
+parent is checked and labelled with that parent; unselect the parent to choose children separately.
+Folder type profiles inherit from their nearest configured parent unless a child overrides them.

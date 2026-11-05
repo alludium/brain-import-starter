@@ -42,7 +42,11 @@ export type Settings = {
     exclude: string[];
     fields: Record<string, string>;
     identity_property?: string;
-    folder_rules: { folder: string; profile: string }[];
+    folder_rules: {
+      folder: string;
+      profile: string;
+      fields?: Record<string, string>;
+    }[];
   };
 };
 export type State = {

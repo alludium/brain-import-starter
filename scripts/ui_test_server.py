@@ -128,11 +128,10 @@ class SyntheticBrain:
 
 with tempfile.TemporaryDirectory() as temp:
     root = Path(temp)
-    (root / "Notes").mkdir()
+    (root / "Notes/Nested").mkdir(parents=True)
     for name in ["Acme", "Conflict", "Unknown"]:
-        (root / "Notes" / f"{name}.md").write_text(
-            f"---\ncompany: {name}\n---\n# {name}\nSynthetic note."
-        )
+        folder = root / ("Notes/Nested" if name == "Unknown" else "Notes")
+        (folder / f"{name}.md").write_text(f"---\ncompany: {name}\n---\n# {name}\nSynthetic note.")
     wizard = Wizard("https://brain.example/mcp", root / "plans", SyntheticBrain)
     http = make_server(wizard, 0)
     print(
