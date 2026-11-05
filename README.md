@@ -69,7 +69,8 @@ Open the folder in Claude Code or Codex and start with:
 
 The digest binds approval to the exact saved plan, including the target and sharing scope.
 Changing a source after planning doesn't change what gets sent. `apply` checks your signed-in
-Brain account against the plan and stops on the first failure or server warning. It never logs
+Brain account against the plan and stops on the first failure or server warning. With a CLI
+supporting `call --jsonl`, it reuses one connection while checking each record before sending the next. It never logs
 raw tool responses. Receipts identify stored sources, versions, scope and any background job.
 If a receipt includes `structure_job_id`, check it with `brain jobs <id>` before calling processing
 complete. Inspect imported sources in Brain before expanding the selection.

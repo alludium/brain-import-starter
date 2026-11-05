@@ -40,7 +40,8 @@ matcher. They must not be regenerated from the actual response to make a run pas
 ## Run against an isolated Brain
 
 The developer acceptance runner uses the actual adapter, immutable plan, installed `brain` CLI,
-MCP server and database. `scripts/sample_data/verify.py` provides its verification functions.
+MCP server and database. With a CLI supporting `call --jsonl`, a phase reuses one connection
+while sending and checking records sequentially. Older CLIs remain compatible. `scripts/sample_data/verify.py` provides its verification functions.
 It requires explicit local-write opt-in and refuses non-loopback targets. Run from the Brain checkout's `evals/` directory after starting its local test services:
 
 ```sh
@@ -61,8 +62,10 @@ Credentials stay in the process environment and ignored local files, never in ge
 The runner verifies every preview against the manifest, checks that preview made no writes,
 applies the reviewed digest, and independently reads back exact text, audience, provenance,
 association statuses and links. An unchanged preview/reimport must reuse every source and grow
-none of the checked tables. A separate lifecycle pass tests approve/reject/defer, audit attribution,
-text revisions, stable-ID renames, four audiences with second-member readback, private identity
+none of the checked tables. A separate lifecycle pass tests approve/reject/defer, resolving an unmatched subject through search,
+audit attribution,
+text revisions, stable-ID renames, four audiences with second-member readback and group removal,
+private identity
 canaries, stale choices and retry after an injected interruption between actual writes.
 Use `--skip-lifecycle` only when that separate pass is not needed. Failure fixtures are planned independently and must refuse before
 Brain is contacted. Do not point these acceptance scripts at a personal or hosted workspace.
@@ -74,7 +77,7 @@ Parents with no direct notes remain selectable; included descendants show their 
 
 ## Limits and evidence
 
-See the dated run report for timings, fixes and actual outcomes. Generated scale notes repeat
+See [the 5 November run report](sample-results-2026-11-05.md) for timings, fixes and actual outcomes. Generated scale notes repeat
 controlled patterns; they do not establish universal matching accuracy. Jay's real conventions,
 hosted OAuth, live Notion and attachment ingestion are separate acceptance work. Name-only cases
 remain reviewable even when an exact email/domain narrows a shared name: the current conservative

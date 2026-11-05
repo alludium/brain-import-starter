@@ -5,7 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-from brain_import.brain import Brain
+from brain_import.brain import Brain, capture_session
 from brain_import.model import ImportProblem
 from brain_import.plans import build, load, private_file, save, server_url, summary
 
@@ -20,7 +20,7 @@ def apply(plan, sha, confirmation, receipt_path, *, brain_factory=Brain, on_rece
     if any(r.get("import_review") for r in plan["records"]):
         brain.require_preview(with_review=True)
     # Open receipts before any writes; stop on the first error, preserving successes.
-    with private_file(receipt_path) as receipts:
+    with private_file(receipt_path) as receipts, capture_session(brain):
         for index, item in enumerate(plan["records"], start=1):
             out = brain.call("capture", item)
             if not isinstance(out.get("source_id"), str) or not isinstance(

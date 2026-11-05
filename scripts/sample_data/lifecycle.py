@@ -22,6 +22,7 @@ def run(target, ids, sql, output, *, other_email, other_token, allow_apply=False
         "::1",
     }:
         raise ValueError("Lifecycle acceptance requires explicit local-write opt-in.")
+    output = output.resolve()
     output.mkdir(parents=True, exist_ok=False)
     vault = output / "vault"
     vault.mkdir()
@@ -134,6 +135,32 @@ def run(target, ids, sql, output, *, other_email, other_token, allow_apply=False
             assert receipt["created"] and receipt["revision_of"] == sid
     results["approve_reject_defer_audit_repeat_revision"] = True
 
+    # Search can resolve an initially unmatched subject to an existing visible identity.
+    unknown = note("searched", {"company": "Unmapped project label"})
+    before = counts(sql)
+    preview = preview_plan(unknown)[0]
+    assert preview["items"][0]["status"] == "unmatched"
+    searched = brain.call(
+        "capture", {**unknown["records"][0], "dry_run": True, "matching_search": "Kestrel"}
+    )
+    assert searched["writes"] is False and counts(sql) == before
+    assert ids["kestrel"] in {c["id"] for c in searched["search_results"]}
+    unknown["records"][0]["import_review"] = {
+        "snapshot": preview["snapshot"],
+        "choices": [
+            {
+                "fingerprint": preview["items"][0]["fingerprint"],
+                "action": "approve",
+                "entity_id": ids["kestrel"],
+            }
+        ],
+    }
+    chosen = store(unknown)[0]["source_id"]
+    assert sql.execute(
+        "SELECT status,entity_id FROM source_associations WHERE source_id=%s", (chosen,)
+    ).fetchone() == ("approved", ids["kestrel"])
+    results["search_resolves_unmatched_without_creating_identity"] = True
+
     # Stable IDs survive an actual filesystem rename; unchanged original content is reused.
     plan = note("move", {"company": "Acme AI", "website": "acme.test"})
     sid = store(plan)[0]["source_id"]
@@ -195,6 +222,17 @@ def run(target, ids, sql, output, *, other_email, other_token, allow_apply=False
             response.status_code,
         )
     results["four_audiences_and_second_member_readback"] = True
+    # Removing that member must revoke access to the already imported group note.
+    brain.call("configure", {"groups": [{"name": "Synthetic import reviewers", "members": [own]}]})
+    removed = httpx.get(
+        target["server"].removesuffix("/mcp")
+        + "/api/sources/"
+        + receipt["source_id"]
+        + "/matching",
+        headers={"Authorization": "Bearer " + other_token},
+    )
+    assert removed.status_code == 404
+    results["removed_group_member_loses_access"] = True
     private = note(
         "canary-private", {"company": "Private Canary Labs", "website": "private-canary.test"}
     )
@@ -222,7 +260,21 @@ def run(target, ids, sql, output, *, other_email, other_token, allow_apply=False
     results["private_identity_cannot_be_lent_to_firm"] = True
 
     # A changed candidate set invalidates an earlier human choice atomically.
-    plan = note("stale", {"company": "Acme AI"})
+    anchor = brain.call(
+        "capture",
+        {
+            "text": "Synthetic lifecycle-only identity, separate from the curated catalog.",
+            "scope": "firm",
+            "entities": [
+                {
+                    "type": "organization",
+                    "name": "Lifecycle Match Anchor",
+                    "external_refs": [{"system": "domain", "external_id": "lifecycle-anchor.test"}],
+                }
+            ],
+        },
+    )["entities"][0]["id"]
+    plan = note("stale", {"company": "Lifecycle Match Anchor"})
     preview = preview_plan(plan)[0]
     plan["records"][0]["import_review"] = {
         "snapshot": preview["snapshot"],
@@ -230,7 +282,7 @@ def run(target, ids, sql, output, *, other_email, other_token, allow_apply=False
             {
                 "fingerprint": preview["items"][0]["fingerprint"],
                 "action": "approve",
-                "entity_id": ids["acme"],
+                "entity_id": anchor,
             }
         ],
     }
@@ -242,8 +294,10 @@ def run(target, ids, sql, output, *, other_email, other_token, allow_apply=False
             "entities": [
                 {
                     "type": "organization",
-                    "name": "Acme duplicate fixture",
-                    "external_refs": [{"system": "domain", "external_id": "duplicate-acme.test"}],
+                    "name": "Lifecycle Duplicate Anchor",
+                    "external_refs": [
+                        {"system": "domain", "external_id": "lifecycle-duplicate.test"}
+                    ],
                 }
             ],
         },
@@ -257,8 +311,8 @@ def run(target, ids, sql, output, *, other_email, other_token, allow_apply=False
                 {
                     "id": extra,
                     "type": "organization",
-                    "name": "Acme duplicate fixture",
-                    "aliases": ["Acme AI"],
+                    "name": "Lifecycle Duplicate Anchor",
+                    "aliases": ["Lifecycle Match Anchor"],
                 }
             ],
         },
