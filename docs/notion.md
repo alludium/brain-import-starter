@@ -53,3 +53,10 @@ multi-select. Unsupported mapped types are refused rather than guessed. Relation
 properties are not expanded into remote records. The page title supplies a heading hint; original
 Markdown is unchanged. [Matching and sharing](matching-and-sharing.md) explains review and the
 current limitation on property-only changes.
+
+## Research databases and origination lists
+
+Try the [38-record synthetic research lab](notion-samples.md) for richer company, thesis and
+person/company-lead examples. Its probe shows which data the current page importer preserves and
+which it cannot yet import. In particular, a successful page plan does not prove that scores,
+statuses, relations or origination-list memberships were retained.
