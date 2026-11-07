@@ -14,12 +14,40 @@ from brain_import.model import ImportProblem
 MAX_PLAN_BYTES = 32 * 1024 * 1024
 ADAPTERS = {"obsidian": obsidian.records, "notion": notion.records}
 PAYLOAD_KEYS = {"system", "external_id", "title", "text", "url", "kind", "scope"}
+OPTIONAL_KEYS = {"matching", "people", "group", "preserve_audience", "import_review"}
+
+
+def validate_audience(item):
+    scope = item.get("scope", "private")
+    if scope not in {"private", "firm", "people", "group"}:
+        raise ImportProblem("Scope must be private, people, group or firm.")
+    if scope == "group":
+        if (
+            not isinstance(item.get("group"), str)
+            or not item["group"].strip()
+            or item.get("people")
+        ):
+            raise ImportProblem("Group scope needs one group name and no people list.")
+    elif scope == "people":
+        people = item.get("people")
+        if (
+            not isinstance(people, list)
+            or not 1 <= len(people) <= 50
+            or any(not isinstance(p, str) or not p.strip() for p in people)
+            or item.get("group")
+        ):
+            raise ImportProblem("People scope needs 1–50 member names/emails and no group.")
+    elif item.get("people") or item.get("group"):
+        raise ImportProblem("Recipients require people or group scope.")
 
 
 def server_url(value: str):
     url = urlsplit(value)
     if (
-        url.scheme != "https"
+        (
+            url.scheme != "https"
+            and not (url.scheme == "http" and url.hostname in {"localhost", "127.0.0.1", "::1"})
+        )
         or not url.hostname
         or url.username
         or url.password
@@ -27,7 +55,8 @@ def server_url(value: str):
         or url.fragment
     ):
         raise ImportProblem(
-            "Brain server must be an HTTPS URL without credentials, query or fragment."
+            "Brain server must use HTTPS (HTTP only on loopback), "
+            "without credentials, query or fragment."
         )
     return value
 
@@ -35,6 +64,10 @@ def server_url(value: str):
 def load_config(path: Path):
     with path.open("rb") as stream:
         config = tomllib.load(stream)
+    return validate_config(config)
+
+
+def validate_config(config):
     server_url(config["target"]["server"])
     for key in ("firm_id", "user_id"):
         if not isinstance(config["target"].get(key), str) or not config["target"][key].strip():
@@ -46,8 +79,7 @@ def load_config(path: Path):
         )
     if source["type"] not in ADAPTERS:
         raise ImportProblem("Unknown source type; add its reader to ADAPTERS.")
-    if config.get("scope", "private") not in {"private", "firm"}:
-        raise ImportProblem("Scope must be private or firm.")
+    validate_audience(config)
     if not 1 <= config.get("max_records", 500) <= 5000:
         raise ImportProblem("max_records must be between 1 and 5000.")
     if not 1 <= source.get("max_text_bytes", 500_000) <= 2_000_000:
@@ -76,14 +108,41 @@ def validate(plan: dict):
         raise ImportProblem("Selection is empty; check filters and source access.")
     seen = set()
     for item in plan["records"]:
-        if set(item) != PAYLOAD_KEYS:
+        if not PAYLOAD_KEYS <= set(item) or set(item) - PAYLOAD_KEYS - OPTIONAL_KEYS:
             raise ImportProblem("Unexpected capture fields in plan; regenerate it.")
         if not all(
             isinstance(item[k], str) and item[k].strip()
             for k in ("system", "external_id", "title", "text")
         ):
             raise ImportProblem("Every record needs text, title and stable source IDs.")
-        if item["scope"] not in {"private", "firm"} or item["kind"] not in {
+        validate_audience(item)
+        if item.get("preserve_audience") is not True:
+            raise ImportProblem("Imports must preserve existing audiences.")
+        if "matching" in item and not isinstance(item["matching"], dict):
+            raise ImportProblem("Matching evidence must be an object.")
+        if "import_review" in item:
+            review = item["import_review"]
+            if (
+                not isinstance(review, dict)
+                or set(review) != {"snapshot", "choices"}
+                or not re.fullmatch(r"[a-f0-9]{64}", str(review.get("snapshot", "")))
+                or not isinstance(review["choices"], list)
+                or len(review["choices"]) > 30
+            ):
+                raise ImportProblem("Invalid reviewed choices; run a new dry run.")
+            seen_choices = set()
+            for choice in review["choices"]:
+                if (
+                    not isinstance(choice, dict)
+                    or set(choice) - {"fingerprint", "action", "entity_id"}
+                    or not re.fullmatch(r"[a-f0-9]{64}", str(choice.get("fingerprint", "")))
+                    or choice["fingerprint"] in seen_choices
+                    or choice.get("action") not in {"approve", "reject", "defer"}
+                    or (choice["action"] == "approve") != bool(choice.get("entity_id"))
+                ):
+                    raise ImportProblem("Invalid reviewed choice; run a new dry run.")
+                seen_choices.add(choice["fingerprint"])
+        if item["kind"] not in {
             "document",
             "external_record",
         }:
@@ -97,11 +156,19 @@ def validate(plan: dict):
 
 
 def build(config_path: Path):
-    config = load_config(config_path)
+    return build_config(load_config(config_path), config_path.resolve().parent)
+
+
+def build_config(config, base):
+    validate_config(config)
     source = config["source"]
     items, total = [], 0
-    for record in ADAPTERS[source["type"]](source, config_path.resolve().parent):
+    for record in ADAPTERS[source["type"]](source, base):
         item = record.payload(config.get("scope", "private"))
+        item["preserve_audience"] = True
+        for key in ("group", "people"):
+            if key in config:
+                item[key] = config[key]
         size = len(record.text.encode("utf-8"))
         total += len(encode(item))
         if size > source.get("max_text_bytes", 500_000):

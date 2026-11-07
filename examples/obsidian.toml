@@ -11,3 +11,4 @@ vault = "obsidian-vault"
 vault_name = "Example research"
 include = ["*.md"]
 exclude = ["Templates/*"]
+identity_property = "brain_id" # Stable across file renames; every selected note has one.

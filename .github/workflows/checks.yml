@@ -14,18 +14,28 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           enable-cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - run: npm ci --prefix ui
+      - run: npm run build --prefix ui
       - run: uv sync --locked
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pytest
       - run: uv run brain-import plan examples/obsidian.toml --out .local/obsidian.plan.json
       - run: uv run brain-import plan examples/notion.toml --out .local/notion.plan.json
+      - run: npx --prefix ui playwright install --with-deps chromium
+      - run: npm test --prefix ui
       - run: uv build
       - name: Smoke-test installed wheel
         run: |
           uv venv /tmp/starter-smoke
           uv pip install --python /tmp/starter-smoke/bin/python dist/*.whl
           /tmp/starter-smoke/bin/brain-import --help
+          /tmp/starter-smoke/bin/python -c "from brain_import.local_ui import ASSETS; assert (ASSETS / 'index.html').is_file()"
       - uses: actions/upload-artifact@v4
         with:
           name: starter-python-${{ matrix.python }}

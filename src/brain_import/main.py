@@ -5,20 +5,22 @@ import json
 import sys
 from pathlib import Path
 
-from brain_import.brain import Brain
+from brain_import.brain import Brain, capture_session
 from brain_import.model import ImportProblem
 from brain_import.plans import build, load, private_file, save, server_url, summary
 
 DEFAULT_SERVER = "https://app.brain.alludium.ai/mcp"
 
 
-def apply(plan, sha, confirmation, receipt_path, *, brain_factory=Brain):
+def apply(plan, sha, confirmation, receipt_path, *, brain_factory=Brain, on_receipt=None):
     if confirmation != sha:
         raise ImportProblem("Plan digest differs from --confirm; inspect the plan again.")
     brain = brain_factory(plan["target"])
     brain.check_identity()
+    if any(r.get("import_review") for r in plan["records"]):
+        brain.require_preview(with_review=True)
     # Open receipts before any writes; stop on the first error, preserving successes.
-    with private_file(receipt_path) as receipts:
+    with private_file(receipt_path) as receipts, capture_session(brain):
         for index, item in enumerate(plan["records"], start=1):
             out = brain.call("capture", item)
             if not isinstance(out.get("source_id"), str) or not isinstance(
@@ -41,17 +43,20 @@ def apply(plan, sha, confirmation, receipt_path, *, brain_factory=Brain):
             }
             receipts.write(json.dumps(receipt) + "\n")
             receipts.flush()
-            print(
-                json.dumps(
-                    {
-                        "record": index,
-                        "source_id": out["source_id"],
-                        "created": out["created"],
-                        "warning_count": receipt["warning_count"],
-                    }
-                ),
-                flush=True,
-            )
+            if on_receipt:
+                on_receipt(receipt)
+            else:
+                print(
+                    json.dumps(
+                        {
+                            "record": index,
+                            "source_id": out["source_id"],
+                            "created": out["created"],
+                            "warning_count": receipt["warning_count"],
+                        }
+                    ),
+                    flush=True,
+                )
             if out.get("scope") != item["scope"] or receipt["warning_count"]:
                 raise ImportProblem(
                     "Capture stored with a different scope or warnings; review before continuing."
@@ -78,9 +83,27 @@ def main():
     run.add_argument("plan", type=Path)
     run.add_argument("--confirm", required=True, help="SHA-256 printed by plan/inspect")
     run.add_argument("--receipts", required=True, type=Path)
+    preview = sub.add_parser(
+        "preview", help="Ask Brain for matches without importing the saved plan"
+    )
+    preview.add_argument("plan", type=Path)
+    ui = sub.add_parser("ui", help="Open the local import wizard")
+    ui.add_argument("--server", default=DEFAULT_SERVER)
+    ui.add_argument("--port", type=int, default=8769)
+    ui.add_argument("--no-open", action="store_true")
+    ui.add_argument("--viewer-url", help="Separate Brain web viewer URL, for local development")
     args = parser.parse_args()
     try:
-        if args.command == "identity":
+        if args.command == "ui":
+            from brain_import.local_ui import serve
+
+            serve(
+                server_url(args.server),
+                args.port,
+                open_browser=not args.no_open,
+                viewer_url=server_url(args.viewer_url).rstrip("/") if args.viewer_url else None,
+            )
+        elif args.command == "identity":
             print(json.dumps(Brain({"server": server_url(args.server)}).identity(), indent=2))
         elif args.command == "plan":
             data = build(args.config)
@@ -90,6 +113,10 @@ def main():
             data, sha = load(args.plan)
             if args.command == "inspect":
                 print(json.dumps(summary(data, sha), indent=2, ensure_ascii=False))
+            elif args.command == "preview":
+                from brain_import.preview import preview_plan
+
+                print(json.dumps(preview_plan(data), indent=2, ensure_ascii=False))
             else:
                 apply(data, sha, args.confirm, args.receipts)
         return 0

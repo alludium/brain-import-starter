@@ -3,6 +3,9 @@
 The live reader fetches **only the page IDs you list**. It uses Notion's read-only page and
 Markdown endpoints, API version `2026-03-11`, Markdown `v2`. It does not search your workspace.
 
+An existing Notion connection in Claude, Codex or ChatGPT does not authenticate this script.
+You do not need to reconnect that assistant: configure a separate API connection for this importer.
+
 Create a Notion connection with read-content capability and grant it access to the selected pages.
 Store its secret in `NOTION_TOKEN` locally using your shell or secret manager; never paste it into
 chat or commit it. Copy config.example.toml to config.local.toml and replace its source section:
@@ -18,7 +21,7 @@ max_text_bytes = 500000
 
 Use raw UUIDs (with or without hyphens), not whole URLs. Every selected child page needs its own
 entry; there is no automatic recursive expansion. A database row is a page, but this reader imports
-its body and title only, not its database properties. Keep the namespace stable and unique to the
+its original Markdown and title, plus configured identity properties as separate evidence. Keep the namespace stable and unique to the
 origin workspace within the firm's Notion sources. `fixture` belongs only in the offline example;
 remove it to use the live API.
 
@@ -30,7 +33,7 @@ configuration or access fixes; errors don't print API response bodies or tokens.
 
 Attachments are references, not downloaded bytes; signed Notion file URLs may expire and may
 change between reads. A changed rendered URL can therefore cause a new Brain version even if the
-visible prose didn't change. Comments, meeting transcripts, page history, database properties and
+visible prose didn't change. Comments, meeting transcripts, page history, unmapped database properties and
 child-page bodies are outside the example's coverage. Notion permissions are not copied into Brain.
 
 For a richer adapter, add explicit page discovery/pagination and property mapping with tests.
@@ -41,3 +44,12 @@ References (checked 4 November 2026):
 - [Read page metadata](https://developers.notion.com/reference/retrieve-a-page)
 - [Read Markdown and incomplete-content behavior](https://developers.notion.com/reference/retrieve-page-markdown)
 - [Request limits and retries](https://developers.notion.com/reference/request-limits)
+
+## Identity properties
+
+Use `[source.fields]` as in the Obsidian guide, for example `company = "Company"` and
+`website = "Website"`. Supported mapped values are title/rich text, URL, email, select and
+multi-select. Unsupported mapped types are refused rather than guessed. Relation and people
+properties are not expanded into remote records. The page title supplies a heading hint; original
+Markdown is unchanged. [Matching and sharing](matching-and-sharing.md) explains review and the
+current limitation on property-only changes.

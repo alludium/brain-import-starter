@@ -24,8 +24,10 @@ facts, relationships or instructions; Brain retains responsibility for its own p
 
 No local 'already imported' database is needed. Reruns send the same IDs to Brain, which handles
 unchanged text. This avoids a stale checkpoint silently skipping data for a different account.
-The trade-off is a CLI subprocess and MCP call per record, including unchanged records. This
-starter favors understandable batches over a long-lived session or optimized background sync.
+The starter reuses one CLI process and MCP connection per finite preview/import phase when
+`brain call --jsonl` is available. It sends one record at a time, checks the result and flushes
+each successful receipt before the next write. Older CLIs use one process per record. It has
+no background sync, parallel writes or automatic retries.
 Use current plans in chronological order; an old plan can create another version of old text.
 Metadata-only changes may be treated as unchanged by Brain's text deduplication.
 

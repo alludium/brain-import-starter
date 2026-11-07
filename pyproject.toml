@@ -1,9 +1,12 @@
 [project]
 name = "brain-import-starter"
-version = "0.1.0"
+version = "0.2.0"
 description = "Small, adaptable source imports through the Alludium Brain CLI"
 requires-python = ">=3.12"
-dependencies = ["httpx>=0.28,<1"]
+dependencies = [
+    "httpx>=0.28,<1",
+    "pyyaml>=6,<7",
+]
 
 [project.scripts]
 brain-import = "brain_import.main:main"
@@ -23,3 +26,6 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.hatch.build]
+artifacts = ["src/brain_import/web/**"]
